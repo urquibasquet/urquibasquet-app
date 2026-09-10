@@ -591,6 +591,9 @@ function DailySchedule() {
   const [end, setEnd] = useState("10:00");
   const [category, setCategory] = useState(DEFAULT_CATEGORIES[0].id);
   const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [permisoHasta, setPermisoHasta] = useState("00:00");
+  const [permisoLoaded, setPermisoLoaded] = useState(false);
   const [now, setNow] = useState(new Date());
   const scrollRef = useRef(null);
   const dateKey = toDateKey(date);
@@ -632,6 +635,32 @@ function DailySchedule() {
       }
     })();
   }, [categories, catsLoaded]);
+
+  // Load "Permiso hasta las" once (shared across all días)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("schedule-permiso");
+        setPermisoHasta(res ? res.value : "00:00");
+      } catch {
+        setPermisoHasta("00:00");
+      } finally {
+        setPermisoLoaded(true);
+      }
+    })();
+  }, []);
+
+  // Persist "Permiso hasta las" on change
+  useEffect(() => {
+    if (!permisoLoaded) return;
+    (async () => {
+      try {
+        await dbSet("schedule-permiso", permisoHasta);
+      } catch (e) {
+        console.error("Error al guardar:", e);
+      }
+    })();
+  }, [permisoHasta, permisoLoaded]);
   function addCategory() {
     const label = newCatLabel.trim();
     if (!label) return;
@@ -779,6 +808,7 @@ function DailySchedule() {
     setStart(ev.start);
     setEnd(ev.end);
     setCategory(ev.category);
+    setShowForm(true);
     nameInputRef.current?.focus();
   }
   function deleteEvent(id) {
@@ -819,7 +849,10 @@ function DailySchedule() {
         .cs-btn:active { transform: scale(0.97); }
         @media (max-width: 820px) {
           .cs-layout { flex-direction: column !important; }
-          .cs-sidebar { width: 100% !important; }
+          .cs-sidebar { width: 100% !important; display: flex !important; flex-direction: column !important; }
+          .cs-hide-mobile { display: none !important; }
+          .cs-btn-row { width: 100%; margin-left: 0 !important; }
+          .cs-btn-row > button { flex: 1 1 0; }
         }
         .cs-print-only { display: none; }
         @media print {
@@ -918,21 +951,55 @@ function DailySchedule() {
     label: "Actividades",
     value: events.length
   }), /*#__PURE__*/React.createElement(StatChip, {
-    label: "Ocupado",
+    label: "Tiempo del evento",
     value: fmtDuration(busyMinutes),
     accent: "#FF8C42"
-  }), /*#__PURE__*/React.createElement(StatChip, {
-    label: "Libre",
-    value: fmtDuration(freeMinutes),
-    accent: "#35D0BA"
-  }), today && /*#__PURE__*/React.createElement(StatChip, {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#1D2027",
+      border: "1px solid #2A2D35",
+      borderRadius: 10,
+      padding: "8px 14px",
+      display: "flex",
+      flexDirection: "column",
+      minWidth: 90
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10.5,
+      color: "#8A8D95",
+      textTransform: "uppercase",
+      letterSpacing: "0.06em"
+    }
+  }, "Permiso hasta las"), /*#__PURE__*/React.createElement("input", {
+    type: "time",
+    value: permisoHasta,
+    onChange: e => setPermisoHasta(e.target.value),
+    style: {
+      background: "transparent",
+      border: "none",
+      color: "#35D0BA",
+      fontFamily: "'Montserrat', system-ui, sans-serif",
+      fontSize: 16,
+      fontWeight: 700,
+      padding: 0,
+      outline: "none"
+    }
+  })), today && /*#__PURE__*/React.createElement(StatChip, {
     label: "Hora actual",
     value: now.toLocaleTimeString("es-AR", {
       hour: "2-digit",
       minute: "2-digit"
     }),
     accent: "#FF4757"
-  }), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cs-btn-row",
+    style: {
+      display: "flex",
+      gap: 8,
+      marginLeft: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
     className: "cs-btn",
     onClick: () => window.print(),
     style: {
@@ -940,15 +1007,31 @@ function DailySchedule() {
       width: "auto",
       padding: "0 14px",
       fontSize: 13,
-      fontWeight: 600,
-      marginLeft: "auto"
+      fontWeight: 600
     }
   }, /*#__PURE__*/React.createElement(Download, {
     size: 14,
     style: {
       marginRight: 6
     }
-  }), " Exportar Cronograma")), /*#__PURE__*/React.createElement("div", {
+  }), " Exportar Cronograma"), /*#__PURE__*/React.createElement("button", {
+    className: "cs-btn",
+    onClick: () => setShowForm(v => !v),
+    style: {
+      ...navBtnStyle,
+      width: "auto",
+      padding: "0 14px",
+      fontSize: 13,
+      fontWeight: 600,
+      borderColor: "#FF8C42",
+      color: "#FF8C42"
+    }
+  }, /*#__PURE__*/React.createElement(Plus, {
+    size: 14,
+    style: {
+      marginRight: 6
+    }
+  }), " ", editingId ? "Editando actividad" : "Nueva Actividad"))), /*#__PURE__*/React.createElement("div", {
     className: "cs-layout",
     style: {
       display: "flex",
@@ -962,7 +1045,9 @@ function DailySchedule() {
       flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
+    className: `cs-activity-form${!showForm ? " cs-hide-mobile" : ""}`,
     style: {
+      order: 2,
       background: "#1D2027",
       border: "1px solid #2A2D35",
       borderRadius: 14,
@@ -1003,7 +1088,8 @@ function DailySchedule() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("label", {
     style: labelStyle
@@ -1011,10 +1097,14 @@ function DailySchedule() {
     type: "time",
     value: start,
     onChange: e => setStart(e.target.value),
-    style: inputStyle
+    style: {
+      ...inputStyle,
+      width: "100%"
+    }
   })), /*#__PURE__*/React.createElement("div", {
     style: {
-      flex: 1
+      flex: 1,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("label", {
     style: labelStyle
@@ -1022,7 +1112,10 @@ function DailySchedule() {
     type: "time",
     value: end,
     onChange: e => setEnd(e.target.value),
-    style: inputStyle
+    style: {
+      ...inputStyle,
+      width: "100%"
+    }
   }))), /*#__PURE__*/React.createElement("label", {
     style: {
       ...labelStyle,
@@ -1278,81 +1371,15 @@ function DailySchedule() {
     style: secondaryBtnStyle
   }, /*#__PURE__*/React.createElement(X, {
     size: 14
-  })))), /*#__PURE__*/React.createElement(SunWidget, {
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      order: 1
+    }
+  }, /*#__PURE__*/React.createElement(SunWidget, {
     date: date,
     startTime: start,
     endTime: end
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 8
-    }
-  }, [...events].sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start)).map(ev => /*#__PURE__*/React.createElement("div", {
-    key: ev.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      background: "#1D2027",
-      border: "1px solid #2A2D35",
-      borderRadius: 10,
-      padding: "9px 12px"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 8,
-      height: 8,
-      borderRadius: "50%",
-      background: catColor(ev.category),
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis"
-    }
-  }, ev.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "#8A8D95",
-      fontFamily: "'Montserrat', system-ui, sans-serif"
-    }
-  }, ev.start, "–", ev.end, " · ", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)))), /*#__PURE__*/React.createElement("button", {
-    className: "cs-btn",
-    onClick: () => startEdit(ev),
-    style: iconBtnStyle,
-    "aria-label": "Editar"
-  }, /*#__PURE__*/React.createElement(Pencil, {
-    size: 13
-  })), /*#__PURE__*/React.createElement("button", {
-    className: "cs-btn",
-    onClick: () => deleteEvent(ev.id),
-    style: {
-      ...iconBtnStyle,
-      color: "#FF6B6B"
-    },
-    "aria-label": "Eliminar"
-  }, /*#__PURE__*/React.createElement(Trash2, {
-    size: 13
-  })))), loaded && events.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "20px 10px",
-      color: "#8A8D95",
-      fontSize: 13,
-      border: "1px dashed #2A2D35",
-      borderRadius: 10
-    }
-  }, "Sin actividades cargadas para este día."))), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minWidth: 0,
