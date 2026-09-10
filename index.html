@@ -116,15 +116,23 @@ const Download = p => /*#__PURE__*/React.createElement(Icon, {
 
 // ── Puente a Firestore: mismo shape que window.storage.get/set de Claude, para no tocar el resto del código ──
 async function dbGet(key) {
-  const snap = await window.__fb.db.collection("urqui").doc(key).get();
-  if (!snap.exists) throw new Error("not found: " + key);
+  const {
+    doc,
+    getDoc
+  } = window.__fb;
+  const snap = await getDoc(doc(window.__fb.db, "urqui", key));
+  if (!snap.exists()) throw new Error("not found: " + key);
   return {
     key,
     value: snap.data().value
   };
 }
 async function dbSet(key, value) {
-  await window.__fb.db.collection("urqui").doc(key).set({
+  const {
+    doc,
+    setDoc
+  } = window.__fb;
+  await setDoc(doc(window.__fb.db, "urqui", key), {
     value,
     updatedAt: Date.now()
   });
@@ -1836,12 +1844,12 @@ function BebidaRow({
       gridTemplateColumns: "1.3fr 1fr 1fr 1fr",
       gap: 8,
       alignItems: "center",
-      marginBottom: 6
+      marginBottom: 7
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       color: CLARO,
-      fontSize: 12,
+      fontSize: 13.5,
       fontFamily: FONT
     }
   }, label), /*#__PURE__*/React.createElement("input", {
@@ -1858,12 +1866,12 @@ function BebidaRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: NARANJA,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       fontWeight: 700,
       outline: "none",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -1879,8 +1887,8 @@ function BebidaRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: BLANCO,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       fontWeight: 700,
       outline: "none",
       fontFamily: FONT,
@@ -1892,11 +1900,11 @@ function BebidaRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: VERDE,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       fontWeight: 700,
       fontFamily: FONT_MONO,
-      textAlign: "center"
+      textAlign: "right"
     }
   }, fmt(total)));
 }
@@ -1960,15 +1968,89 @@ function InsumoRow({
   onDelete
 }) {
   const total = (Number(item.cantidad) || 0) * (Number(item.costo) || 0);
+  const fileInputRef = useRef(null);
+  function handleFoto(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange({
+      ...item,
+      foto: reader.result
+    });
+    reader.readAsDataURL(file);
+  }
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1.4fr 0.8fr 0.9fr 1fr auto",
+      gridTemplateColumns: "auto auto 1.4fr 0.8fr 0.9fr 1fr auto",
       gap: 6,
       alignItems: "center",
-      marginBottom: 6
+      marginBottom: 7,
+      opacity: item.comprado ? 0.5 : 1
     }
-  }, /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => onChange({
+      ...item,
+      comprado: !item.comprado
+    }),
+    title: "Marcar como comprado",
+    style: {
+      width: 22,
+      height: 22,
+      borderRadius: 5,
+      border: `1px solid ${item.comprado ? VERDE : BORDE}`,
+      background: item.comprado ? VERDE : GRIS_CLARO,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      padding: 0,
+      flexShrink: 0
+    }
+  }, item.comprado && /*#__PURE__*/React.createElement(Check, {
+    size: 13,
+    color: NEGRO
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => fileInputRef.current?.click(),
+    title: "Subir foto",
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: 6,
+      border: `1px solid ${BORDE}`,
+      background: GRIS_CLARO,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      padding: 0,
+      overflow: "hidden",
+      flexShrink: 0
+    }
+  }, item.foto ? /*#__PURE__*/React.createElement("img", {
+    src: item.foto,
+    alt: "",
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "📷")), /*#__PURE__*/React.createElement("input", {
+    ref: fileInputRef,
+    type: "file",
+    accept: "image/*",
+    onChange: handleFoto,
+    style: {
+      display: "none"
+    }
+  }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     placeholder: "Descripción",
     value: item.desc,
@@ -1981,10 +2063,11 @@ function InsumoRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: BLANCO,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       outline: "none",
-      fontFamily: FONT
+      fontFamily: FONT,
+      textDecoration: item.comprado ? "line-through" : "none"
     }
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -2004,8 +2087,8 @@ function InsumoRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: BLANCO,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       fontWeight: 700,
       outline: "none",
       fontFamily: FONT,
@@ -2028,14 +2111,29 @@ function InsumoRow({
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: NARANJA,
-      padding: "6px 8px",
-      fontSize: 12,
+      padding: "7px 9px",
+      fontSize: 13.5,
       fontWeight: 700,
       outline: "none",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      padding: "7px 9px"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: MUTED,
+      fontSize: 12
+    }
+  }, "$"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
     placeholder: "Total",
@@ -2050,17 +2148,18 @@ function InsumoRow({
       });
     },
     style: {
-      background: GRIS,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
+      background: "none",
+      border: "none",
       color: ROJO,
-      padding: "6px 8px",
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: 700,
       fontFamily: FONT_MONO,
-      textAlign: "center"
+      textAlign: "right",
+      outline: "none",
+      width: "100%",
+      padding: 0
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: onDelete,
     style: {
       background: "none",
@@ -2391,6 +2490,8 @@ function TorneoPlanner() {
   const [manualItems, setManualItems] = useState(DEFAULTS.manualItems);
   const [insumoItems, setInsumoItems] = useState(DEFAULTS.insumoItems);
   const [checklistItems, setChecklistItems] = useState(DEFAULTS.checklistItems);
+  const [editingChecklistIdx, setEditingChecklistIdx] = useState(null);
+  const [editChecklistText, setEditChecklistText] = useState("");
 
   // ── LOAD from storage on mount ──
   useEffect(() => {
@@ -2592,44 +2693,59 @@ function TorneoPlanner() {
   const saldoFinal = capitalInicial + gananciaTotal;
   const saveLabel = saveStatus === "saving" ? "💾 Guardando..." : saveStatus === "saved" ? "✓ Guardado" : saveStatus === "error" ? "⚠ Error al guardar" : "";
   function descargarListaCompras() {
+    const DESC_W = 34,
+      NUM_W = 10;
+    function padR(s, w) {
+      s = String(s);
+      return s.length >= w ? s.slice(0, w - 1) + "…" : s + " ".repeat(w - s.length);
+    }
+    function padL(s, w) {
+      s = String(s);
+      return s.length >= w ? s : " ".repeat(w - s.length) + s;
+    }
+    function linea(desc, detalle, monto) {
+      return padR(desc, DESC_W) + padL(detalle, 14) + padL(fmt(monto), NUM_W);
+    }
     const lineas = [];
     lineas.push("LISTA DE COMPRAS — EL URQUI BÁSQUET 7MA EDICIÓN");
-    lineas.push("Generada automáticamente a partir de lo cargado en la app");
-    lineas.push("=".repeat(50));
-    if (total7ma > 0) {
-      lineas.push("");
-      lineas.push("REMERAS");
-      lineas.push(`Remeras 7ma Algodón — ${total7ma} u. x ${fmt(costoRemera7ma)} = ${fmt(costoTotal7ma)}`);
-    }
-    const insumosConCantidad = insumoItems.filter(i => i.cantidad > 0);
-    if (insumosConCantidad.length > 0) {
+    lineas.push("=".repeat(DESC_W + 14 + NUM_W));
+    const insumosPendientes = insumoItems.filter(i => i.cantidad > 0 && !i.comprado);
+    if (insumosPendientes.length > 0) {
+      const subtotalInsumos = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0);
       lineas.push("");
       lineas.push("INSUMOS DE GASTRONOMÍA");
-      insumosConCantidad.forEach(item => {
-        let linea = `${item.desc || "(sin descripción)"} — ${item.cantidad} u. x ${fmt(item.costo)} = ${fmt(item.cantidad * item.costo)}`;
-        if (item.obs) linea += ` (${item.obs})`;
-        lineas.push(linea);
+      insumosPendientes.forEach(item => {
+        lineas.push(linea(item.desc || "(sin descripción)", `${item.cantidad} x ${fmt(item.costo)}`, item.cantidad * item.costo));
+        if (item.obs) lineas.push(`  (${item.obs})`);
       });
+      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
+      lineas.push(padR("Subtotal insumos", DESC_W + 14) + padL(fmt(subtotalInsumos), NUM_W));
     }
     if (kitItems.length > 0) {
+      const subtotalKit = kitItems.reduce((a, i) => a + (i.precio || 0), 0) * equipos;
       lineas.push("");
       lineas.push(`KIT POR EQUIPO (x ${equipos} equipos)`);
       kitItems.forEach(item => {
-        lineas.push(`${item.desc || "(sin descripción)"} — ${fmt(item.precio)}/equipo x ${equipos} = ${fmt(item.precio * equipos)}`);
+        lineas.push(linea(item.desc || "(sin descripción)", `${fmt(item.precio)} x ${equipos}`, item.precio * equipos));
       });
+      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
+      lineas.push(padR("Subtotal kit por equipo", DESC_W + 14) + padL(fmt(subtotalKit), NUM_W));
     }
     if (manualItems.length > 0) {
+      const subtotalManual = manualItems.reduce((a, i) => a + (Number(i.precio) || 0), 0);
       lineas.push("");
       lineas.push("GASTOS VARIOS");
       manualItems.forEach(item => {
-        let linea = `${item.desc || "(sin descripción)"} — ${fmt(item.precio)}`;
-        if (item.obs) linea += ` (${item.obs})`;
-        lineas.push(linea);
+        lineas.push(linea(item.desc || "(sin descripción)", "", item.precio));
+        if (item.obs) lineas.push(`  (${item.obs})`);
       });
+      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
+      lineas.push(padR("Subtotal gastos varios", DESC_W + 14) + padL(fmt(subtotalManual), NUM_W));
     }
+    const totalGeneral = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0) + costoKitTotal + costoManualTotal;
     lineas.push("");
-    lineas.push("=".repeat(50));
-    lineas.push(`TOTAL A COMPRAR: ${fmt(costoTotal7ma + costoInsumosTotal + costoKitTotal + costoManualTotal)}`);
+    lineas.push("=".repeat(DESC_W + 14 + NUM_W));
+    lineas.push(padR("TOTAL A COMPRAR", DESC_W + 14) + padL(fmt(totalGeneral), NUM_W));
     const texto = lineas.join("\n");
     const blob = new Blob([texto], {
       type: "text/plain;charset=utf-8"
@@ -3747,7 +3863,7 @@ function TorneoPlanner() {
   }, /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
-      fontSize: 12.5,
+      fontSize: 14,
       marginTop: 0,
       marginBottom: 10,
       fontFamily: FONT
@@ -3755,7 +3871,7 @@ function TorneoPlanner() {
   }, "Club de Maltas, Focacceria Marzano e Istanbul tienen sus stands. El Urqui controla parrilla y bebidas."), /*#__PURE__*/React.createElement("div", {
     style: {
       color: BLANCO,
-      fontSize: 13,
+      fontSize: 14.5,
       fontWeight: 700,
       marginBottom: 8,
       fontFamily: FONT
@@ -3770,7 +3886,7 @@ function TorneoPlanner() {
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT
@@ -3778,16 +3894,16 @@ function TorneoPlanner() {
   }, "Producto"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
   }, "Precio"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
@@ -3796,11 +3912,11 @@ function TorneoPlanner() {
   }, "Cant. a vender"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
   }, "Ganancia")), /*#__PURE__*/React.createElement(BebidaRow, {
     label: "🌭 Choripanes",
@@ -3852,30 +3968,37 @@ function TorneoPlanner() {
     setCant: setGaseosaBeb1LCant
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: BLANCO,
-      fontSize: 13,
-      fontWeight: 700,
-      margin: "18px 0 4px",
-      fontFamily: FONT
+      background: `${VERDE}14`,
+      border: `1px solid ${VERDE}44`,
+      borderRadius: 8,
+      padding: "10px 12px",
+      marginTop: 6,
+      marginBottom: 20
     }
-  }, "🧾 Insumos que compramos (no se venden)"), /*#__PURE__*/React.createElement("p", {
+  }, /*#__PURE__*/React.createElement(Row, {
+    label: "Total ganancia (lo que vendemos)",
+    value: fmt(ventaChoris + ventaHamburguesas + totalBebidas),
+    bold: true,
+    color: VERDE
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
-      color: MUTED,
-      fontSize: 12,
-      margin: "0 0 10px",
+      color: BLANCO,
+      fontSize: 14.5,
+      fontWeight: 700,
+      marginBottom: 8,
       fontFamily: FONT
     }
-  }, "Todo lo que compramos para armar lo de arriba (fernet, coca, carbón, hielo, etc.) — es lo que se descuenta como costo. Cargá el costo unitario y calculo el total, o cargá el total directo y calculo el costo unitario."), /*#__PURE__*/React.createElement("div", {
+  }, "🧾 Insumos que compramos"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1.4fr 0.8fr 0.9fr 1fr auto",
+      gridTemplateColumns: "22px 30px 1.4fr 0.8fr 0.9fr 1fr auto",
       gap: 6,
       marginBottom: 6
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT
@@ -3883,7 +4006,7 @@ function TorneoPlanner() {
   }, "Descripción"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
@@ -3892,20 +4015,20 @@ function TorneoPlanner() {
   }, "Cant. a comprar"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
   }, "Costo"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: MUTED,
-      fontSize: 10,
+      fontSize: 11.5,
       textTransform: "uppercase",
       letterSpacing: "0.04em",
       fontFamily: FONT,
-      textAlign: "center"
+      textAlign: "right"
     }
   }, "Total"), /*#__PURE__*/React.createElement("span", null)), insumoItems.map((item, i) => /*#__PURE__*/React.createElement(InsumoRow, {
     key: i,
@@ -3928,28 +4051,33 @@ function TorneoPlanner() {
       border: `1px dashed ${BORDE}`,
       borderRadius: 6,
       color: CLARO,
-      padding: "6px 12px",
-      fontSize: 12,
+      padding: "7px 14px",
+      fontSize: 13.5,
       cursor: "pointer",
       fontFamily: FONT,
       marginBottom: 8
     }
   }, "+ Agregar insumo"), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: `${VERDE}14`,
-      border: `1px solid ${VERDE}44`,
+      background: `${ROJO}14`,
+      border: `1px solid ${ROJO}44`,
       borderRadius: 8,
-      padding: 12,
-      marginTop: 8
+      padding: "10px 12px",
+      marginTop: 6,
+      marginBottom: 16
     }
   }, /*#__PURE__*/React.createElement(Row, {
-    label: "Total venta",
-    value: fmt(ventaChoris + ventaHamburguesas + totalBebidas)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Total insumos (costo)",
+    label: "Total costo (insumos)",
     value: fmt(costoInsumosTotal),
+    bold: true,
     color: ROJO
-  }), /*#__PURE__*/React.createElement(Row, {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: GRIS_CLARO,
+      borderRadius: 8,
+      padding: "10px 12px"
+    }
+  }, /*#__PURE__*/React.createElement(Row, {
     label: "Ganancia neta",
     value: fmt(ventaChoris + ventaHamburguesas + totalBebidas - costoInsumosTotal),
     bold: true,
@@ -4311,7 +4439,73 @@ function TorneoPlanner() {
     color: saldoFinal >= capitalInicial ? VERDE : ROJO
   })), /*#__PURE__*/React.createElement(Card, {
     title: "⚙️ Checklist del día"
-  }, checklistItems.map((item, i) => /*#__PURE__*/React.createElement("div", {
+  }, checklistItems.map((item, i) => editingChecklistIdx === i ? /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      gap: 8,
+      padding: "9px 0",
+      borderBottom: `1px solid ${GRIS_CLARO}`,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    value: editChecklistText,
+    onChange: e => setEditChecklistText(e.target.value),
+    onKeyDown: e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (editChecklistText.trim()) {
+          const n = [...checklistItems];
+          n[i] = {
+            ...n[i],
+            text: editChecklistText.trim()
+          };
+          setChecklistItems(n);
+        }
+        setEditingChecklistIdx(null);
+      }
+      if (e.key === "Escape") setEditingChecklistIdx(null);
+    },
+    style: {
+      flex: 1,
+      background: GRIS_CLARO,
+      border: `1px solid ${NARANJA}`,
+      borderRadius: 6,
+      color: BLANCO,
+      padding: "6px 9px",
+      fontSize: 12.5,
+      outline: "none",
+      fontFamily: FONT
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (editChecklistText.trim()) {
+        const n = [...checklistItems];
+        n[i] = {
+          ...n[i],
+          text: editChecklistText.trim()
+        };
+        setChecklistItems(n);
+      }
+      setEditingChecklistIdx(null);
+    },
+    style: {
+      background: NARANJA,
+      border: "none",
+      borderRadius: 6,
+      width: 26,
+      height: 26,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(Check, {
+    size: 13,
+    color: NEGRO
+  }))) : /*#__PURE__*/React.createElement("div", {
     key: i,
     onClick: () => {
       const n = [...checklistItems];
@@ -4346,8 +4540,28 @@ function TorneoPlanner() {
   }, item.text), /*#__PURE__*/React.createElement("button", {
     onClick: e => {
       e.stopPropagation();
+      setEditingChecklistIdx(i);
+      setEditChecklistText(item.text);
+    },
+    title: "Editar",
+    style: {
+      background: "none",
+      border: "none",
+      color: CLARO,
+      opacity: 0.6,
+      cursor: "pointer",
+      padding: 2,
+      display: "flex",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(Pencil, {
+    size: 12
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
       setChecklistItems(checklistItems.filter((_, j) => j !== i));
     },
+    title: "Eliminar",
     style: {
       background: "none",
       border: "none",
