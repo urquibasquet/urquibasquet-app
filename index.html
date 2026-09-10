@@ -161,7 +161,9 @@ const DEFAULT_CATEGORIES = [{
 function slugify(s) {
   return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `cat-${Date.now()}`;
 }
-const PIXELS_PER_HOUR = 60;
+const PIXELS_PER_HOUR = 100;
+const START_HOUR = 7;
+const VISIBLE_HOURS = 24 - START_HOUR;
 const DAY_MINUTES = 24 * 60;
 function pad(n) {
   return String(n).padStart(2, "0");
@@ -191,6 +193,18 @@ function fmtDayLabel(d) {
 }
 function isSameDay(a, b) {
   return toDateKey(a) === toDateKey(b);
+}
+
+// Para exportar: en actividades de categoría Sorteo, "SORTEO 1: Remera 1, Remera 2" se convierte en lista numerada.
+function formatForExport(text, isSorteo) {
+  if (!isSorteo || !text.includes(",")) return text;
+  const colonIdx = text.indexOf(":");
+  const header = colonIdx !== -1 ? text.slice(0, colonIdx + 1) : "";
+  const rest = colonIdx !== -1 ? text.slice(colonIdx + 1) : text;
+  const items = rest.split(",").map(s => s.trim()).filter(Boolean);
+  if (items.length <= 1) return text;
+  const lines = items.map((item, i) => `    ${i + 1}. ${item}`);
+  return (header ? header + "\n" : "") + lines.join("\n");
 }
 function mergeIntervals(events) {
   const sorted = [...events].map(e => [minutesFromTime(e.start), minutesFromTime(e.end)]).sort((a, b) => a[0] - b[0]);
@@ -559,20 +573,7 @@ function SunWidget({
     style: {
       color: "#B7BAC2"
     }
-  }, startTime, "–", endTime), /*#__PURE__*/React.createElement("span", null, "🌇 ", hToClock(sunData.sunsetH))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: "#6B6E76",
-      lineHeight: 1.35
-    }
-  }, phase.tip), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 9.5,
-      color: "#5B5E68",
-      lineHeight: 1.35,
-      fontStyle: "italic"
-    }
-  }, "Esta es la temperatura estimada para el día."));
+  }, startTime, "–", endTime), /*#__PURE__*/React.createElement("span", null, "🌇 ", hToClock(sunData.sunsetH))));
 }
 function DailySchedule() {
   const [date, setDate] = useState(TOURNEY_DATE);
@@ -707,7 +708,7 @@ function DailySchedule() {
   useEffect(() => {
     if (!scrollRef.current) return;
     const target = today ? now.getHours() * 60 + now.getMinutes() : 8 * 60;
-    const top = target / 60 * PIXELS_PER_HOUR - 120;
+    const top = (target / 60 - START_HOUR) * PIXELS_PER_HOUR - 120;
     scrollRef.current.scrollTo({
       top: Math.max(0, top),
       behavior: "smooth"
@@ -986,13 +987,13 @@ function DailySchedule() {
     ref: nameInputRef,
     value: name,
     onChange: e => setName(e.target.value),
-    rows: 2,
+    rows: 4,
     style: {
       ...inputStyle,
       resize: "vertical",
       fontFamily: "inherit",
       lineHeight: 1.4,
-      minHeight: 60
+      minHeight: 110
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1371,7 +1372,7 @@ function DailySchedule() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "relative",
-      height: 24 * PIXELS_PER_HOUR,
+      height: VISIBLE_HOURS * PIXELS_PER_HOUR,
       display: "flex"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -1382,36 +1383,36 @@ function DailySchedule() {
       borderRight: "1px solid #2A2D35"
     }
   }, Array.from({
-    length: 24
-  }).map((_, h) => /*#__PURE__*/React.createElement("div", {
-    key: h,
+    length: VISIBLE_HOURS
+  }).map((_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
     style: {
       position: "absolute",
-      top: h * PIXELS_PER_HOUR - 7,
+      top: i * PIXELS_PER_HOUR - 7,
       right: 8,
       fontFamily: "'Montserrat', system-ui, sans-serif",
       fontSize: 11,
       fontWeight: 700,
       color: "#5B5E68"
     }
-  }, pad(h)))), /*#__PURE__*/React.createElement("div", {
+  }, pad(START_HOUR + i)))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       position: "relative"
     }
   }, Array.from({
-    length: 24
-  }).map((_, h) => /*#__PURE__*/React.createElement("div", {
-    key: h,
+    length: VISIBLE_HOURS
+  }).map((_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
     style: {
       position: "absolute",
-      top: h * PIXELS_PER_HOUR,
+      top: i * PIXELS_PER_HOUR,
       left: 0,
       right: 0,
-      borderTop: h === 0 ? "none" : "1px solid #24262D"
+      borderTop: i === 0 ? "none" : "1px solid #24262D"
     }
   })), Array.from({
-    length: 48
+    length: VISIBLE_HOURS * 2
   }).map((_, half) => half % 2 === 1 && /*#__PURE__*/React.createElement("div", {
     key: half,
     style: {
@@ -1421,10 +1422,10 @@ function DailySchedule() {
       right: 0,
       borderTop: "1px dashed #1E2027"
     }
-  })), today && /*#__PURE__*/React.createElement("div", {
+  })), today && nowMinutes >= START_HOUR * 60 && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
-      top: nowMinutes / 60 * PIXELS_PER_HOUR,
+      top: (nowMinutes / 60 - START_HOUR) * PIXELS_PER_HOUR,
       left: 0,
       right: 0,
       display: "flex",
@@ -1452,7 +1453,7 @@ function DailySchedule() {
     col,
     totalCols
   }) => {
-    const top = minutesFromTime(ev.start) / 60 * PIXELS_PER_HOUR;
+    const top = (minutesFromTime(ev.start) / 60 - START_HOUR) * PIXELS_PER_HOUR;
     const naturalHeight = (minutesFromTime(ev.end) - minutesFromTime(ev.start)) / 60 * PIXELS_PER_HOUR;
     const nextStartMin = nextStartByCol[ev.id];
     const desiredHeight = Math.max(20, naturalHeight);
@@ -1476,14 +1477,40 @@ function DailySchedule() {
         overflow: "hidden"
       },
       title: `${ev.name} · ${ev.start}–${ev.end}`
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        deleteEvent(ev.id);
+      },
+      title: "Eliminar",
+      style: {
+        position: "absolute",
+        top: 3,
+        right: 3,
+        width: 16,
+        height: 16,
+        borderRadius: 4,
+        background: "#14161Bcc",
+        border: "none",
+        color: "#FF6B6B",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+        zIndex: 2
+      }
+    }, /*#__PURE__*/React.createElement(X, {
+      size: 11
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 12,
         fontWeight: 700,
         whiteSpace: "pre-line",
         wordBreak: "break-word",
         lineHeight: 1.25,
-        overflow: "hidden"
+        overflow: "hidden",
+        paddingRight: 16
       }
     }, ev.name), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1545,7 +1572,7 @@ function DailySchedule() {
       fontWeight: 700,
       whiteSpace: "pre-line"
     }
-  }, ev.name))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
+  }, formatForExport(ev.name, catLabel(ev.category).toLowerCase().includes("sorteo"))))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
 }
 function StatChip({
   label,
