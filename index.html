@@ -7,13 +7,14 @@
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #0F1013; font-family: 'Montserrat', system-ui, sans-serif; }
+  * { font-family: 'Montserrat', system-ui, sans-serif; }
   #root { min-height: 100vh; }
   #fb-error-banner {
     display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-    background: #FF6B6B; color: #14161B; font-family: sans-serif; font-size: 13px;
+    background: #FF6B6B; color: #14161B; font-family: 'Montserrat', system-ui, sans-serif; font-size: 13px;
     padding: 10px 14px; text-align: center; font-weight: 700;
   }
 </style>
@@ -501,7 +502,7 @@ function SunWidget({
     }
   }, phase.label)), /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "'JetBrains Mono', monospace",
+      fontFamily: "'Montserrat', system-ui, sans-serif",
       fontSize: 12,
       fontWeight: 700,
       color: "#FF8C42"
@@ -803,7 +804,7 @@ function DailySchedule() {
       padding: "0"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
         input, select { font-family: 'Montserrat', sans-serif; }
         input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
@@ -1322,7 +1323,7 @@ function DailySchedule() {
     style: {
       fontSize: 11,
       color: "#8A8D95",
-      fontFamily: "'JetBrains Mono', monospace"
+      fontFamily: "'Montserrat', system-ui, sans-serif"
     }
   }, ev.start, "–", ev.end, " · ", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)))), /*#__PURE__*/React.createElement("button", {
     className: "cs-btn",
@@ -1388,7 +1389,7 @@ function DailySchedule() {
       position: "absolute",
       top: h * PIXELS_PER_HOUR - 7,
       right: 8,
-      fontFamily: "'JetBrains Mono', monospace",
+      fontFamily: "'Montserrat', system-ui, sans-serif",
       fontSize: 11,
       fontWeight: 700,
       color: "#5B5E68"
@@ -1488,7 +1489,7 @@ function DailySchedule() {
       style: {
         fontSize: 10.5,
         color: "#B7BAC2",
-        fontFamily: "'JetBrains Mono', monospace",
+        fontFamily: "'Montserrat', system-ui, sans-serif",
         marginTop: 2
       }
     }, ev.start, "–", ev.end));
@@ -1572,7 +1573,7 @@ function StatChip({
     }
   }, label), /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "'JetBrains Mono', monospace",
+      fontFamily: "'Montserrat', system-ui, sans-serif",
       fontSize: 16,
       fontWeight: 700,
       color: accent
@@ -1653,7 +1654,7 @@ const warnStyle = {
 
 const FONT = "'Montserrat', system-ui, sans-serif";
 const FONT_DISPLAY = "'Montserrat', sans-serif";
-const FONT_MONO = "'JetBrains Mono', monospace";
+const FONT_MONO = "'Montserrat', system-ui, sans-serif";
 const NARANJA = "#FF8C42";
 const NEGRO = "#14161B";
 const GRIS = "#1D2027";
@@ -1665,17 +1666,21 @@ const CLARO = "#B7BAC2";
 const VERDE = "#35D0BA";
 const ROJO = "#FF6B6B";
 const AZUL = "#5B9DFF";
-function DeleteRowBtn({
+function IconBtn({
+  icon: Icon,
   onClick,
-  size = 13
+  color = ROJO,
+  size = 13,
+  title
 }) {
   return /*#__PURE__*/React.createElement("button", {
     onClick: onClick,
+    title: title,
     style: {
       background: "transparent",
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
-      color: ROJO,
+      color,
       padding: "8px 10px",
       cursor: "pointer",
       fontSize: size,
@@ -1686,9 +1691,21 @@ function DeleteRowBtn({
       justifyContent: "center",
       flexShrink: 0
     }
-  }, /*#__PURE__*/React.createElement(X, {
+  }, /*#__PURE__*/React.createElement(Icon, {
     size: size
   }));
+}
+function DeleteRowBtn({
+  onClick,
+  size = 13
+}) {
+  return /*#__PURE__*/React.createElement(IconBtn, {
+    icon: X,
+    onClick: onClick,
+    color: ROJO,
+    size: size,
+    title: "Eliminar"
+  });
 }
 const STORAGE_KEY = "urqui-torneo-7ma";
 function Card({
@@ -3549,11 +3566,6 @@ function TorneoPlanner() {
     value: `− ${fmt(costoKitTotal)}`,
     color: ROJO,
     bold: true
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      borderTop: `1px solid ${BORDE}`,
-      margin: "6px 0"
-    }
   }), /*#__PURE__*/React.createElement(Row, {
     label: "Neto inscripción",
     value: fmt(totalInscripcionConKit),
@@ -4505,26 +4517,17 @@ function TorneoPlanner() {
     style: {
       flex: 1
     }
-  }, item.text), /*#__PURE__*/React.createElement("button", {
+  }, item.text), /*#__PURE__*/React.createElement(IconBtn, {
+    icon: Pencil,
     onClick: e => {
       e.stopPropagation();
       setEditingChecklistIdx(i);
       setEditChecklistText(item.text);
     },
-    title: "Editar",
-    style: {
-      background: "none",
-      border: "none",
-      color: CLARO,
-      opacity: 0.6,
-      cursor: "pointer",
-      padding: 2,
-      display: "flex",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement(Pencil, {
-    size: 12
-  })), /*#__PURE__*/React.createElement(DeleteRowBtn, {
+    color: CLARO,
+    size: 12,
+    title: "Editar"
+  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: e => {
       e.stopPropagation();
       setChecklistItems(checklistItems.filter((_, j) => j !== i));
