@@ -29,15 +29,13 @@
 <!-- Tu configuración de Firebase (completala en firebase-config.js) -->
 <script src="firebase-config.js"></script>
 
-<!-- Inicializa Firebase (módulo ES, corre antes de que la app React lo necesite) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
+<!-- Firebase (versión "compat", sin módulos ES — evita choques con el traductor de Babel de más abajo) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
   try {
-    const app = initializeApp(window.FIREBASE_CONFIG);
-    const db = getFirestore(app);
-    window.__fb = { db, doc, getDoc, setDoc };
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    window.__fb = { db: firebase.firestore() };
   } catch (e) {
     console.error("Error inicializando Firebase:", e);
     document.getElementById("fb-error-banner").style.display = "block";
@@ -70,14 +68,12 @@ const Download = p => <Icon {...p} path="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" />;
 
 // ── Puente a Firestore: mismo shape que window.storage.get/set de Claude, para no tocar el resto del código ──
 async function dbGet(key) {
-  const { doc, getDoc } = window.__fb;
-  const snap = await getDoc(doc(window.__fb.db, "urqui", key));
-  if (!snap.exists()) throw new Error("not found: " + key);
+  const snap = await window.__fb.db.collection("urqui").doc(key).get();
+  if (!snap.exists) throw new Error("not found: " + key);
   return { key, value: snap.data().value };
 }
 async function dbSet(key, value) {
-  const { doc, setDoc } = window.__fb;
-  await setDoc(doc(window.__fb.db, "urqui", key), { value, updatedAt: Date.now() });
+  await window.__fb.db.collection("urqui").doc(key).set({ value, updatedAt: Date.now() });
   return { key, value };
 }
 
