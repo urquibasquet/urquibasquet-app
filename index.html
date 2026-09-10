@@ -4,9 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Urqui Básquet — 7ma Edición</title>
+<link rel="icon" type="image/png" href="favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #0F1013; font-family: 'Montserrat', system-ui, sans-serif; }
   #root { min-height: 100vh; }
@@ -802,7 +803,7 @@ function DailySchedule() {
       padding: "0"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
         * { box-sizing: border-box; }
         input, select { font-family: 'Montserrat', sans-serif; }
         input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
@@ -840,7 +841,7 @@ function DailySchedule() {
     }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontFamily: "'Space Grotesk', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       fontSize: 13,
       letterSpacing: "0.12em",
       color: "#FF8C42",
@@ -849,7 +850,7 @@ function DailySchedule() {
     }
   }, "Cronograma diario"), /*#__PURE__*/React.createElement("h1", {
     style: {
-      fontFamily: "'Space Grotesk', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       fontSize: 26,
       fontWeight: 700,
       margin: "4px 0 0"
@@ -1651,7 +1652,7 @@ const warnStyle = {
 // ============================================================
 
 const FONT = "'Montserrat', system-ui, sans-serif";
-const FONT_DISPLAY = "'Space Grotesk', sans-serif";
+const FONT_DISPLAY = "'Montserrat', sans-serif";
 const FONT_MONO = "'JetBrains Mono', monospace";
 const NARANJA = "#FF8C42";
 const NEGRO = "#14161B";
@@ -1664,6 +1665,31 @@ const CLARO = "#B7BAC2";
 const VERDE = "#35D0BA";
 const ROJO = "#FF6B6B";
 const AZUL = "#5B9DFF";
+function DeleteRowBtn({
+  onClick,
+  size = 13
+}) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    style: {
+      background: "transparent",
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      color: ROJO,
+      padding: "8px 10px",
+      cursor: "pointer",
+      fontSize: size,
+      fontWeight: 700,
+      lineHeight: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(X, {
+    size: size
+  }));
+}
 const STORAGE_KEY = "urqui-torneo-7ma";
 function Card({
   title,
@@ -1681,10 +1707,10 @@ function Card({
   }, title && /*#__PURE__*/React.createElement("h3", {
     style: {
       color: accent ? NARANJA : CLARO,
-      margin: "0 0 10px",
-      fontSize: 11.5,
-      fontWeight: 700,
-      letterSpacing: "0.08em",
+      margin: "0 0 12px",
+      fontSize: 16,
+      fontWeight: 800,
+      letterSpacing: "0.04em",
       textTransform: "uppercase",
       fontFamily: FONT_DISPLAY
     }
@@ -1951,6 +1977,120 @@ function NewChecklistInput({
     color: NEGRO
   })));
 }
+function KitItemRow({
+  item,
+  onChange,
+  onDelete
+}) {
+  const fileInputRef = useRef(null);
+  function handleFoto(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange({
+      ...item,
+      foto: reader.result
+    });
+    reader.readAsDataURL(file);
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      alignItems: "center",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => fileInputRef.current?.click(),
+    title: "Subir foto",
+    style: {
+      width: 34,
+      height: 34,
+      borderRadius: 6,
+      border: `1px solid ${BORDE}`,
+      background: GRIS_CLARO,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      padding: 0,
+      overflow: "hidden",
+      flexShrink: 0
+    }
+  }, item.foto ? /*#__PURE__*/React.createElement("img", {
+    src: item.foto,
+    alt: "",
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: MUTED,
+      fontSize: 14
+    }
+  }, "📷")), /*#__PURE__*/React.createElement("input", {
+    ref: fileInputRef,
+    type: "file",
+    accept: "image/*",
+    onChange: handleFoto,
+    style: {
+      display: "none"
+    }
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: item.desc,
+    onChange: e => onChange({
+      ...item,
+      desc: e.target.value
+    }),
+    placeholder: "Descripción",
+    style: {
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      color: BLANCO,
+      padding: "8px 10px",
+      flex: 2,
+      fontSize: 13.5,
+      outline: "none",
+      fontFamily: FONT
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    inputMode: "numeric",
+    value: fmtMoneyInput(item.precio),
+    onChange: e => onChange({
+      ...item,
+      precio: parseMoneyInput(e.target.value)
+    }),
+    placeholder: "$ 0",
+    style: {
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      color: NARANJA,
+      padding: "8px 8px",
+      width: "100%",
+      fontSize: 13.5,
+      fontWeight: 700,
+      outline: "none",
+      fontFamily: FONT,
+      textAlign: "right"
+    }
+  })), onDelete && /*#__PURE__*/React.createElement(DeleteRowBtn, {
+    onClick: onDelete
+  }));
+}
 function InsumoRow({
   item,
   onChange,
@@ -2129,19 +2269,10 @@ function InsumoRow({
       outline: "none",
       padding: "7px 9px"
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: onDelete,
-    style: {
-      background: "none",
-      border: "none",
-      color: ROJO,
-      cursor: "pointer",
-      padding: 4,
-      display: "flex"
-    }
-  }, /*#__PURE__*/React.createElement(X, {
     size: 14
-  })));
+  }));
 }
 function TalleGrid({
   talles,
@@ -2772,21 +2903,12 @@ function TorneoPlanner() {
       flexWrap: "wrap",
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: FONT_DISPLAY,
-      fontSize: 11.5,
-      letterSpacing: "0.1em",
-      color: NARANJA,
-      fontWeight: 600,
-      textTransform: "uppercase"
-    }
-  }, "El Urqui Básquet · Asociación Civil"), /*#__PURE__*/React.createElement("h1", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
     style: {
       fontFamily: FONT_DISPLAY,
       fontSize: 22,
       fontWeight: 700,
-      margin: "3px 0 0",
+      margin: 0,
       color: BLANCO
     }
   }, "🏀 7ma Edición — Plan de Torneo")), /*#__PURE__*/React.createElement("div", {
@@ -3372,84 +3494,16 @@ function TorneoPlanner() {
       margin: "0 0 12px",
       fontFamily: FONT
     }
-  }, "Costo por equipo de cada ítem — se multiplica por la cantidad de equipos."), kitItems.map((item, i) => /*#__PURE__*/React.createElement("div", {
+  }, "Costo por equipo de cada ítem — se multiplica por la cantidad de equipos."), kitItems.map((item, i) => /*#__PURE__*/React.createElement(KitItemRow, {
     key: i,
-    style: {
-      display: "flex",
-      gap: 6,
-      alignItems: "center",
-      marginBottom: 6
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: item.desc,
-    onChange: e => {
+    item: item,
+    onChange: next => {
       const n = [...kitItems];
-      n[i] = {
-        ...n[i],
-        desc: e.target.value
-      };
+      n[i] = next;
       setKitItems(n);
     },
-    placeholder: "Descripción",
-    style: {
-      background: GRIS_CLARO,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      color: BLANCO,
-      padding: "8px 10px",
-      flex: 2,
-      fontSize: 12,
-      outline: "none",
-      fontFamily: FONT
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 4,
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    inputMode: "numeric",
-    value: fmtMoneyInput(item.precio),
-    onChange: e => {
-      const n = [...kitItems];
-      n[i] = {
-        ...n[i],
-        precio: parseMoneyInput(e.target.value)
-      };
-      setKitItems(n);
-    },
-    placeholder: "$ 0",
-    style: {
-      background: GRIS_CLARO,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      color: NARANJA,
-      padding: "8px 8px",
-      width: "100%",
-      fontSize: 12,
-      fontWeight: 700,
-      outline: "none",
-      fontFamily: FONT,
-      textAlign: "right"
-    }
-  })), kitItems.length > 1 && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setKitItems(kitItems.filter((_, j) => j !== i)),
-    style: {
-      background: "transparent",
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      color: ROJO,
-      padding: "8px 10px",
-      cursor: "pointer",
-      fontSize: 13,
-      fontWeight: 700,
-      lineHeight: 1
-    }
-  }, "×"))), /*#__PURE__*/React.createElement("button", {
+    onDelete: kitItems.length > 1 ? () => setKitItems(kitItems.filter((_, j) => j !== i)) : null
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setKitItems([...kitItems, {
       desc: "",
       precio: 0
@@ -3473,23 +3527,12 @@ function TorneoPlanner() {
       padding: 14,
       marginTop: 4
     }
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Equipos",
-    value: `${equipos} equipos`
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Precio por equipo (inscripción)",
-    value: fmt(precioPorEquipo)
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      borderTop: `1px solid ${BORDE}`,
-      margin: "6px 0"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       color: CLARO,
       fontSize: 11.5,
       fontWeight: 600,
-      margin: "6px 0 4px",
+      margin: "0 0 4px",
       fontFamily: FONT
     }
   }, "Kit por equipo:"), kitItems.map((item, i) => /*#__PURE__*/React.createElement(Row, {
@@ -3516,14 +3559,7 @@ function TorneoPlanner() {
     value: fmt(totalInscripcionConKit),
     bold: true,
     color: VERDE
-  })), /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: MUTED,
-      fontSize: 11.5,
-      marginTop: 10,
-      fontFamily: FONT
-    }
-  }, "💡 La última edición fue $40.000 por equipo. Ajustalo según lo que definan.")), tab === "remeras" && /*#__PURE__*/React.createElement(Card, {
+  }))), tab === "remeras" && /*#__PURE__*/React.createElement(Card, {
     title: "Remeras",
     accent: true
   }, /*#__PURE__*/React.createElement("div", {
@@ -4220,19 +4256,10 @@ function TorneoPlanner() {
       outline: "none",
       fontFamily: FONT
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: () => setManualItems(manualItems.filter((_, j) => j !== i)),
-    style: {
-      background: "none",
-      border: "none",
-      color: ROJO,
-      cursor: "pointer",
-      padding: 4,
-      display: "flex"
-    }
-  }, /*#__PURE__*/React.createElement(X, {
     size: 16
-  })))), /*#__PURE__*/React.createElement("button", {
+  }))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setManualItems([...manualItems, {
       desc: "",
       precio: 0,
@@ -4497,25 +4524,13 @@ function TorneoPlanner() {
     }
   }, /*#__PURE__*/React.createElement(Pencil, {
     size: 12
-  })), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: e => {
       e.stopPropagation();
       setChecklistItems(checklistItems.filter((_, j) => j !== i));
     },
-    title: "Eliminar",
-    style: {
-      background: "none",
-      border: "none",
-      color: ROJO,
-      opacity: 0.6,
-      cursor: "pointer",
-      padding: 2,
-      display: "flex",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement(X, {
     size: 13
-  })))), /*#__PURE__*/React.createElement(NewChecklistInput, {
+  }))), /*#__PURE__*/React.createElement(NewChecklistInput, {
     onAdd: text => setChecklistItems([...checklistItems, {
       text,
       checked: false
@@ -4565,7 +4580,7 @@ function UrquiApp() {
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontFamily: "'Space Grotesk', 'Inter', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       fontSize: 12.5,
       fontWeight: 700,
       color: "#8A8D95",
