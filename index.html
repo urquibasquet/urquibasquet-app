@@ -986,13 +986,6 @@ function DailySchedule() {
     ref: nameInputRef,
     value: name,
     onChange: e => setName(e.target.value),
-    onKeyDown: e => {
-      if (e.key === "Enter" && name.trim() && start < end) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    placeholder: "Ej: Reunión con Tomás",
     style: inputStyle
   }), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1523,10 +1516,14 @@ function DailySchedule() {
     }
   }, "CRONOGRAMA — ", fmtDayLabel(date).toUpperCase()), /*#__PURE__*/React.createElement("div", {
     style: {
+      fontSize: 11
+    }
+  }, "El Urqui Básquet — ", events.length, " actividad", events.length === 1 ? "" : "es", " · Total de horas del evento: ", fmtDuration(busyMinutes)), /*#__PURE__*/React.createElement("div", {
+    style: {
       fontSize: 11,
       marginBottom: 16
     }
-  }, "El Urqui Básquet — ", events.length, " actividad", events.length === 1 ? "" : "es", " · Ocupado ", fmtDuration(busyMinutes), " · Libre ", fmtDuration(freeMinutes)), /*#__PURE__*/React.createElement("div", {
+  }, "Atardecer ", hToClock(getSunData(date).sunsetH)), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid #000",
       marginBottom: 10
@@ -1540,14 +1537,7 @@ function DailySchedule() {
     style: {
       fontWeight: 700
     }
-  }, ev.name))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      borderTop: "1px solid #000",
-      marginTop: 10,
-      paddingTop: 6,
-      fontSize: 10
-    }
-  }, "Amanecer ", hToClock(getSunData(date).sunriseH), " — Atardecer ", hToClock(getSunData(date).sunsetH))));
+  }, ev.name))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
 }
 function StatChip({
   label,
@@ -4569,6 +4559,7 @@ function UrquiApp() {
       background: "#0F1013"
     }
   }, /*#__PURE__*/React.createElement("div", {
+    className: "cs-app-shell",
     style: {
       position: "sticky",
       top: 0,
@@ -4607,7 +4598,7 @@ function UrquiApp() {
       borderRadius: 8,
       fontSize: 13,
       fontWeight: 700,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       cursor: "pointer",
       border: view === v.id ? "1px solid #FF8C42" : "1px solid #2A2D35",
       background: view === v.id ? "#FF8C4222" : "transparent",
