@@ -572,7 +572,7 @@ function SunWidget({
       lineHeight: 1.35,
       fontStyle: "italic"
     }
-  }, "Esta es la temperatura estimada para el día que se indica arriba, es decir ", date.getDate(), "/", date.getMonth() + 1, "."));
+  }, "Esta es la temperatura estimada para el día."));
 }
 function DailySchedule() {
   const [date, setDate] = useState(TOURNEY_DATE);
@@ -982,11 +982,18 @@ function DailySchedule() {
     size: 13
   }), " Editando actividad") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Plus, {
     size: 13
-  }), " Nueva actividad")), /*#__PURE__*/React.createElement("input", {
+  }), " Nueva actividad")), /*#__PURE__*/React.createElement("textarea", {
     ref: nameInputRef,
     value: name,
     onChange: e => setName(e.target.value),
-    style: inputStyle
+    rows: 2,
+    style: {
+      ...inputStyle,
+      resize: "vertical",
+      fontFamily: "inherit",
+      lineHeight: 1.4,
+      minHeight: 60
+    }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1473,7 +1480,7 @@ function DailySchedule() {
       style: {
         fontSize: 12,
         fontWeight: 700,
-        whiteSpace: "normal",
+        whiteSpace: "pre-line",
         wordBreak: "break-word",
         lineHeight: 1.25,
         overflow: "hidden"
@@ -1535,7 +1542,8 @@ function DailySchedule() {
     }
   }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]   (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement("div", {
     style: {
-      fontWeight: 700
+      fontWeight: 700,
+      whiteSpace: "pre-line"
     }
   }, ev.name))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
 }
