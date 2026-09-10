@@ -4,8 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Urqui Básquet — 7ma Edición</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  html, body { margin: 0; padding: 0; background: #0F1013; }
+  html, body { margin: 0; padding: 0; background: #0F1013; font-family: 'Montserrat', system-ui, sans-serif; }
   #root { min-height: 100vh; }
   #fb-error-banner {
     display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
@@ -19,15 +22,9 @@
   ⚠ No se pudo conectar con Firebase. Revisá que pegaste bien tu configuración en firebase-config.js y que las reglas de Firestore permiten lectura/escritura.
 </div>
 <div id="root"></div>
-
-<!-- React 18 -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-<!-- Tu configuración de Firebase (completala en firebase-config.js) -->
 <script src="firebase-config.js"></script>
-
-<!-- Firebase (versión "compat", sin módulos ES) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
@@ -39,8 +36,6 @@
     document.getElementById("fb-error-banner").style.display = "block";
   }
 </script>
-
-<!-- La app (Cronograma + Plan del Torneo) — ya compilada a JS plano, sin Babel en el navegador -->
 <script>
 const {
   useState,
@@ -637,7 +632,9 @@ function DailySchedule() {
     (async () => {
       try {
         await dbSet("schedule-categories", JSON.stringify(categories));
-      } catch {/* ignore */}
+      } catch (e) {
+        console.error("Error al guardar:", e);
+      }
     })();
   }, [categories, catsLoaded]);
   function addCategory() {
@@ -700,7 +697,9 @@ function DailySchedule() {
     (async () => {
       try {
         await dbSet(`schedule:${dateKey}`, JSON.stringify(events));
-      } catch {/* ignore */}
+      } catch (e) {
+        console.error("Error al guardar:", e);
+      }
     })();
   }, [events, loaded, dateKey]);
 
@@ -804,16 +803,16 @@ function DailySchedule() {
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "cs-app-shell",
     style: {
-      fontFamily: "'Inter', system-ui, sans-serif",
+      fontFamily: "'Montserrat', system-ui, sans-serif",
       background: "#14161B",
       color: "#F2F1ED",
       minHeight: "100vh",
       padding: "0"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
         * { box-sizing: border-box; }
-        input, select { font-family: 'Inter', sans-serif; }
+        input, select { font-family: 'Montserrat', sans-serif; }
         input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
         .cs-scroll::-webkit-scrollbar { width: 8px; }
         .cs-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -1659,7 +1658,7 @@ const warnStyle = {
 // Plan financiero del torneo (mismo estilo visual que el cronograma)
 // ============================================================
 
-const FONT = "'Inter', system-ui, sans-serif";
+const FONT = "'Montserrat', system-ui, sans-serif";
 const FONT_DISPLAY = "'Space Grotesk', sans-serif";
 const FONT_MONO = "'JetBrains Mono', monospace";
 const NARANJA = "#FF8C42";
@@ -1718,15 +1717,16 @@ function Row({
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       color: sub ? MUTED : BLANCO,
-      fontSize: sub ? 11 : 12,
+      fontSize: sub ? 12 : bold ? 14.5 : 13.5,
       fontStyle: sub ? "italic" : "normal",
+      fontWeight: bold ? 700 : 400,
       fontFamily: FONT
     }
   }, label), /*#__PURE__*/React.createElement("span", {
     style: {
       color: color || BLANCO,
       fontWeight: bold ? 700 : 500,
-      fontSize: bold ? 12.5 : 12,
+      fontSize: bold ? 15.5 : 13.5,
       fontFamily: FONT_MONO,
       whiteSpace: "nowrap"
     }
@@ -1783,7 +1783,8 @@ function NumInput({
   label,
   value,
   onChange,
-  suffix = ""
+  suffix = "",
+  money = false
 }) {
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1806,11 +1807,9 @@ function NumInput({
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: value === 0 ? "" : String(value),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      onChange(v === "" ? 0 : Number(v));
-    },
+    placeholder: money ? "$ 0" : "0",
+    value: money ? fmtMoneyInput(value) : value === 0 ? "" : String(value),
+    onChange: e => onChange(money ? parseMoneyInput(e.target.value) : e.target.value.replace(/^0+(?=\d)/, "") === "" ? 0 : Number(e.target.value.replace(/^0+(?=\d)/, ""))),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -1820,7 +1819,8 @@ function NumInput({
       width: "100%",
       fontSize: 12.5,
       outline: "none",
-      fontFamily: FONT_MONO
+      fontFamily: FONT_MONO,
+      textAlign: money ? "right" : "left"
     }
   }), suffix && /*#__PURE__*/React.createElement("span", {
     style: {
@@ -1855,12 +1855,9 @@ function BebidaRow({
   }, label), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    placeholder: "Precio",
-    value: precio === 0 ? "" : String(precio),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecio(v === "" ? 0 : Number(v));
-    },
+    placeholder: "$ 0",
+    value: fmtMoneyInput(precio),
+    onChange: e => setPrecio(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -2097,15 +2094,12 @@ function InsumoRow({
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    placeholder: "0",
-    value: item.costo === 0 ? "" : String(item.costo),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      onChange({
-        ...item,
-        costo: v === "" ? 0 : Number(v)
-      });
-    },
+    placeholder: "$ 0",
+    value: fmtMoneyInput(item.costo),
+    onChange: e => onChange({
+      ...item,
+      costo: parseMoneyInput(e.target.value)
+    }),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -2118,29 +2112,13 @@ function InsumoRow({
       fontFamily: FONT,
       textAlign: "right"
     }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 2,
-      background: GRIS,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      padding: "7px 9px"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: MUTED,
-      fontSize: 12
-    }
-  }, "$"), /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    placeholder: "Total",
-    value: total === 0 ? "" : String(total),
+    placeholder: "$ 0",
+    value: fmtMoneyInput(total),
     onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      const nuevoTotal = v === "" ? 0 : Number(v);
+      const nuevoTotal = parseMoneyInput(e.target.value);
       const cantidad = Number(item.cantidad) || 0;
       onChange({
         ...item,
@@ -2148,18 +2126,18 @@ function InsumoRow({
       });
     },
     style: {
-      background: "none",
-      border: "none",
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
       color: ROJO,
       fontSize: 13.5,
       fontWeight: 700,
       fontFamily: FONT_MONO,
       textAlign: "right",
       outline: "none",
-      width: "100%",
-      padding: 0
+      padding: "7px 9px"
     }
-  })), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: onDelete,
     style: {
       background: "none",
@@ -2246,6 +2224,11 @@ function TabBtn({
 }
 const TALLES = ["XS", "S", "M", "L", "XL", "XXL"];
 const fmt = n => `$${Math.round(n).toLocaleString("es-AR")}`;
+const fmtMoneyInput = n => !n ? "" : `$ ${Math.round(n).toLocaleString("es-AR")}`;
+const parseMoneyInput = s => {
+  const d = s.replace(/[^\d]/g, "");
+  return d === "" ? 0 : Number(d);
+};
 const DEFAULTS = {
   pack1Num: 1,
   pack1Precio: 5000,
@@ -2650,6 +2633,7 @@ function TorneoPlanner() {
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
       } catch (e) {
+        console.error("Error al guardar en Firestore:", e);
         setSaveStatus("error");
       }
     }, 600);
@@ -2693,8 +2677,9 @@ function TorneoPlanner() {
   const saldoFinal = capitalInicial + gananciaTotal;
   const saveLabel = saveStatus === "saving" ? "💾 Guardando..." : saveStatus === "saved" ? "✓ Guardado" : saveStatus === "error" ? "⚠ Error al guardar" : "";
   function descargarListaCompras() {
-    const DESC_W = 34,
-      NUM_W = 10;
+    const DESC_W = 42,
+      DET_W = 20,
+      NUM_W = 14;
     function padR(s, w) {
       s = String(s);
       return s.length >= w ? s.slice(0, w - 1) + "…" : s + " ".repeat(w - s.length);
@@ -2704,11 +2689,11 @@ function TorneoPlanner() {
       return s.length >= w ? s : " ".repeat(w - s.length) + s;
     }
     function linea(desc, detalle, monto) {
-      return padR(desc, DESC_W) + padL(detalle, 14) + padL(fmt(monto), NUM_W);
+      return padR(desc, DESC_W) + padL(detalle, DET_W) + padL(fmt(monto), NUM_W);
     }
     const lineas = [];
     lineas.push("LISTA DE COMPRAS — EL URQUI BÁSQUET 7MA EDICIÓN");
-    lineas.push("=".repeat(DESC_W + 14 + NUM_W));
+    lineas.push("=".repeat(DESC_W + DET_W + NUM_W));
     const insumosPendientes = insumoItems.filter(i => i.cantidad > 0 && !i.comprado);
     if (insumosPendientes.length > 0) {
       const subtotalInsumos = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0);
@@ -2718,8 +2703,8 @@ function TorneoPlanner() {
         lineas.push(linea(item.desc || "(sin descripción)", `${item.cantidad} x ${fmt(item.costo)}`, item.cantidad * item.costo));
         if (item.obs) lineas.push(`  (${item.obs})`);
       });
-      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
-      lineas.push(padR("Subtotal insumos", DESC_W + 14) + padL(fmt(subtotalInsumos), NUM_W));
+      lineas.push("-".repeat(DESC_W + DET_W + NUM_W));
+      lineas.push(padR("Subtotal insumos", DESC_W + DET_W) + padL(fmt(subtotalInsumos), NUM_W));
     }
     if (kitItems.length > 0) {
       const subtotalKit = kitItems.reduce((a, i) => a + (i.precio || 0), 0) * equipos;
@@ -2728,8 +2713,8 @@ function TorneoPlanner() {
       kitItems.forEach(item => {
         lineas.push(linea(item.desc || "(sin descripción)", `${fmt(item.precio)} x ${equipos}`, item.precio * equipos));
       });
-      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
-      lineas.push(padR("Subtotal kit por equipo", DESC_W + 14) + padL(fmt(subtotalKit), NUM_W));
+      lineas.push("-".repeat(DESC_W + DET_W + NUM_W));
+      lineas.push(padR("Subtotal kit por equipo", DESC_W + DET_W) + padL(fmt(subtotalKit), NUM_W));
     }
     if (manualItems.length > 0) {
       const subtotalManual = manualItems.reduce((a, i) => a + (Number(i.precio) || 0), 0);
@@ -2739,13 +2724,13 @@ function TorneoPlanner() {
         lineas.push(linea(item.desc || "(sin descripción)", "", item.precio));
         if (item.obs) lineas.push(`  (${item.obs})`);
       });
-      lineas.push("-".repeat(DESC_W + 14 + NUM_W));
-      lineas.push(padR("Subtotal gastos varios", DESC_W + 14) + padL(fmt(subtotalManual), NUM_W));
+      lineas.push("-".repeat(DESC_W + DET_W + NUM_W));
+      lineas.push(padR("Subtotal gastos varios", DESC_W + DET_W) + padL(fmt(subtotalManual), NUM_W));
     }
     const totalGeneral = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0) + costoKitTotal + costoManualTotal;
     lineas.push("");
-    lineas.push("=".repeat(DESC_W + 14 + NUM_W));
-    lineas.push(padR("TOTAL A COMPRAR", DESC_W + 14) + padL(fmt(totalGeneral), NUM_W));
+    lineas.push("=".repeat(DESC_W + DET_W + NUM_W));
+    lineas.push(padR("TOTAL A COMPRAR", DESC_W + DET_W) + padL(fmt(totalGeneral), NUM_W));
     const texto = lineas.join("\n");
     const blob = new Blob([texto], {
       type: "text/plain;charset=utf-8"
@@ -2873,27 +2858,18 @@ function TorneoPlanner() {
       alignItems: "center",
       gap: 2
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: FONT_MONO,
-      fontSize: 15,
-      fontWeight: 700,
-      color: AZUL
-    }
-  }, "$"), /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: capitalInicial === 0 ? "" : String(capitalInicial),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setCapitalInicial(v === "" ? 0 : Number(v));
-    },
+    placeholder: "$ 0",
+    value: fmtMoneyInput(capitalInicial),
+    onChange: e => setCapitalInicial(parseMoneyInput(e.target.value)),
     style: {
       background: "transparent",
       border: "none",
       color: AZUL,
       padding: 0,
-      width: 100,
+      width: 120,
       fontSize: 15,
       fontWeight: 700,
       outline: "none",
@@ -3177,11 +3153,8 @@ function TorneoPlanner() {
   }, "Precio del pack ($)"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: precio === 0 ? "" : String(precio),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecio(v === "" ? 0 : Number(v));
-    },
+    value: fmtMoneyInput(precio),
+    onChange: e => setPrecio(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS,
       border: `1px solid ${BORDE}`,
@@ -3390,7 +3363,8 @@ function TorneoPlanner() {
   }), /*#__PURE__*/React.createElement(NumInput, {
     label: "Precio por equipo",
     value: precioPorEquipo,
-    onChange: setPrecioPorEquipo
+    onChange: setPrecioPorEquipo,
+    money: true
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       margin: "18px 0 10px",
@@ -3444,25 +3418,19 @@ function TorneoPlanner() {
       gap: 4,
       flex: 1
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: MUTED,
-      fontSize: 11.5
-    }
-  }, "$"), /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: item.precio === 0 ? "" : String(item.precio),
+    value: fmtMoneyInput(item.precio),
     onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
       const n = [...kitItems];
       n[i] = {
         ...n[i],
-        precio: v === "" ? 0 : Number(v)
+        precio: parseMoneyInput(e.target.value)
       };
       setKitItems(n);
     },
-    placeholder: "0",
+    placeholder: "$ 0",
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -3603,11 +3571,8 @@ function TorneoPlanner() {
   }, "$"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: precioTransferencia7ma === 0 ? "" : String(precioTransferencia7ma),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecioTransferencia7ma(v === "" ? 0 : Number(v));
-    },
+    value: fmtMoneyInput(precioTransferencia7ma),
+    onChange: e => setPrecioTransferencia7ma(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -3647,11 +3612,8 @@ function TorneoPlanner() {
   }, "$"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: precioEfectivo7ma === 0 ? "" : String(precioEfectivo7ma),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecioEfectivo7ma(v === "" ? 0 : Number(v));
-    },
+    value: fmtMoneyInput(precioEfectivo7ma),
+    onChange: e => setPrecioEfectivo7ma(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -3755,11 +3717,8 @@ function TorneoPlanner() {
   }, "$"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: precioTransferenciaJuego === 0 ? "" : String(precioTransferenciaJuego),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecioTransferenciaJuego(v === "" ? 0 : Number(v));
-    },
+    value: fmtMoneyInput(precioTransferenciaJuego),
+    onChange: e => setPrecioTransferenciaJuego(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -3799,11 +3758,8 @@ function TorneoPlanner() {
   }, "$"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: precioEfectivoJuego === 0 ? "" : String(precioEfectivoJuego),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setPrecioEfectivoJuego(v === "" ? 0 : Number(v));
-    },
+    value: fmtMoneyInput(precioEfectivoJuego),
+    onChange: e => setPrecioEfectivoJuego(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -4228,14 +4184,13 @@ function TorneoPlanner() {
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    placeholder: "Precio",
-    value: item.precio === 0 ? "" : String(item.precio),
+    placeholder: "$ 0",
+    value: fmtMoneyInput(item.precio),
     onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
       const n = [...manualItems];
       n[i] = {
         ...n[i],
-        precio: v === "" ? 0 : Number(v)
+        precio: parseMoneyInput(e.target.value)
       };
       setManualItems(n);
     },
@@ -4248,7 +4203,8 @@ function TorneoPlanner() {
       fontSize: 12.5,
       fontWeight: 700,
       outline: "none",
-      fontFamily: FONT
+      fontFamily: FONT,
+      textAlign: "right"
     }
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -4402,26 +4358,19 @@ function TorneoPlanner() {
       alignItems: "center",
       gap: 4
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: MUTED,
-      fontSize: 11.5
-    }
-  }, "$"), /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
-    value: capitalInicial === 0 ? "" : String(capitalInicial),
-    onChange: e => {
-      const v = e.target.value.replace(/^0+(?=\d)/, "");
-      setCapitalInicial(v === "" ? 0 : Number(v));
-    },
+    placeholder: "$ 0",
+    value: fmtMoneyInput(capitalInicial),
+    onChange: e => setCapitalInicial(parseMoneyInput(e.target.value)),
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: AZUL,
       padding: "5px 9px",
-      width: 110,
+      width: 130,
       fontSize: 12.5,
       fontWeight: 700,
       outline: "none",
