@@ -111,23 +111,15 @@ const Download = p => /*#__PURE__*/React.createElement(Icon, {
 
 // ── Puente a Firestore: mismo shape que window.storage.get/set de Claude, para no tocar el resto del código ──
 async function dbGet(key) {
-  const {
-    doc,
-    getDoc
-  } = window.__fb;
-  const snap = await getDoc(doc(window.__fb.db, "urqui", key));
-  if (!snap.exists()) throw new Error("not found: " + key);
+  const snap = await window.__fb.db.collection("urqui").doc(key).get();
+  if (!snap.exists) throw new Error("not found: " + key);
   return {
     key,
     value: snap.data().value
   };
 }
 async function dbSet(key, value) {
-  const {
-    doc,
-    setDoc
-  } = window.__fb;
-  await setDoc(doc(window.__fb.db, "urqui", key), {
+  await window.__fb.db.collection("urqui").doc(key).set({
     value,
     updatedAt: Date.now()
   });
