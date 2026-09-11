@@ -2407,16 +2407,20 @@ function TalleGrid({
     }
   }, talles.map((talle, i) => /*#__PURE__*/React.createElement("div", {
     key: talle,
+    className: "torneo-talle-cell",
     style: {
-      textAlign: "center"
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
       color: accentColor,
-      fontSize: 10.5,
+      fontSize: 11,
       fontWeight: 700,
-      marginBottom: 3,
-      fontFamily: FONT_DISPLAY
+      fontFamily: FONT_DISPLAY,
+      flexShrink: 0
     }
   }, talle), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -2433,6 +2437,7 @@ function TalleGrid({
       color: BLANCO,
       padding: "6px 3px",
       width: "100%",
+      minWidth: 0,
       fontSize: 12.5,
       fontWeight: 600,
       outline: "none",
@@ -2890,9 +2895,9 @@ function TorneoPlanner() {
   const ventaRemeras7maTransf = total7ma * precioTransferencia7ma;
   const ventaRemeras7maEfec = total7ma * precioEfectivo7ma;
   const ventaRemeras7ma = (ventaRemeras7maTransf + ventaRemeras7maEfec) / 2; // promedio, usado en los totales
-  const gananciaRemeras7maTransf = ventaRemeras7maTransf - costoTotal7ma;
-  const gananciaRemeras7maEfec = ventaRemeras7maEfec - costoTotal7ma;
-  const gananciaRemeras7ma = ventaRemeras7ma - costoTotal7ma;
+  const gananciaRemeras7maTransf = ventaRemeras7maTransf; // ya tenemos las remeras, no se compran — todo lo vendido es ganancia
+  const gananciaRemeras7maEfec = ventaRemeras7maEfec;
+  const gananciaRemeras7ma = ventaRemeras7ma;
   const vendiblesJuego = Math.max(0, totalJuego - unidadesCampeones);
   const ventaJuegoTransf = totalJuego * precioTransferenciaJuego;
   const ventaJuegoEfec = totalJuego * precioEfectivoJuego;
@@ -2913,7 +2918,7 @@ function TorneoPlanner() {
   const costoManualTotal = manualItems.reduce((a, b) => a + (Number(b.precio) || 0), 0);
   const totalInscripcionConKit = totalInscripcion - costoKitTotal;
   const totalIngresos = recaudadoSorteo + totalInscripcion + ventaRemeras7ma + gananciaJuego + ventaChoris + ventaHamburguesas + totalBebidas + totalSponsors;
-  const totalEgresos = costoTotal7ma + costoKitTotal + costoManualTotal + costoInsumosTotal;
+  const totalEgresos = costoKitTotal + costoManualTotal + costoInsumosTotal;
   const gananciaTotal = totalIngresos - totalEgresos;
   const saldoFinal = capitalInicial + gananciaTotal;
   const saveLabel = saveStatus === "saving" ? "💾 Guardando..." : saveStatus === "saved" ? "✓ Guardado" : saveStatus === "error" ? "⚠ Error al guardar" : "";
@@ -3045,6 +3050,9 @@ function TorneoPlanner() {
 
           /* Remeras: precio arriba, input+sufijo abajo */
           .torneo-precio-row span:first-child { flex-basis: 100% !important; }
+
+          /* Talles: en mobile, apilado (como antes) — en web queda Talle|número en la misma celda */
+          .torneo-talle-cell { flex-direction: column !important; }
         }
       `), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4393,7 +4401,7 @@ function TorneoPlanner() {
       borderRadius: 6,
       color: BLANCO,
       padding: "7px 10px",
-      flex: "2 1 140px",
+      flex: "3 1 160px",
       minWidth: 0,
       fontSize: 12.5,
       outline: "none",
@@ -4417,8 +4425,8 @@ function TorneoPlanner() {
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: NARANJA,
-      padding: "7px 10px",
-      flex: "1 1 90px",
+      padding: "7px 6px",
+      flex: "1 1 70px",
       minWidth: 0,
       fontSize: 12.5,
       fontWeight: 700,
@@ -4529,10 +4537,6 @@ function TorneoPlanner() {
   })), /*#__PURE__*/React.createElement(Card, {
     title: "📤 Egresos"
   }, /*#__PURE__*/React.createElement(Row, {
-    label: "Remeras 7ma Algodón",
-    value: fmt(costoTotal7ma),
-    color: ROJO
-  }), /*#__PURE__*/React.createElement(Row, {
     label: "Kit por equipo",
     value: fmt(costoKitTotal),
     color: ROJO
