@@ -3522,16 +3522,40 @@ function TorneoPlanner() {
       outline: "none",
       fontFamily: FONT
     }
-  }))), /*#__PURE__*/React.createElement(Slider, {
-    label: "Packs vendidos",
-    min: 0,
-    max: maxV,
-    step: 1,
-    value: vendidos,
-    onChange: setVendidos,
-    prefix: "",
-    suffix: " packs"
-  }), /*#__PURE__*/React.createElement(Row, {
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      color: MUTED,
+      fontSize: 11.5,
+      display: "block",
+      marginBottom: 3,
+      fontFamily: FONT
+    }
+  }, "Packs vendidos"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    inputMode: "numeric",
+    placeholder: "0",
+    value: vendidos === 0 ? "" : String(vendidos),
+    onChange: e => {
+      const v = e.target.value.replace(/^0+(?=\d)/, "");
+      setVendidos(v === "" ? 0 : Number(v));
+    },
+    style: {
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      color: NARANJA,
+      padding: "7px 10px",
+      width: "100%",
+      fontSize: 12.5,
+      fontWeight: 700,
+      outline: "none",
+      fontFamily: FONT
+    }
+  })), /*#__PURE__*/React.createElement(Row, {
     label: "Números generados",
     value: `${vendidos * num}`
   }), /*#__PURE__*/React.createElement(Row, {
