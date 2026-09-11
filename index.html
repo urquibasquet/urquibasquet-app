@@ -2732,7 +2732,19 @@ const DEFAULTS = {
   }]
 };
 function TorneoPlanner() {
-  const [tab, setTab] = useState("inscripcion");
+  const [tab, setTabRaw] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem("urqui-last-tab");
+      if (["inscripcion", "sorteo", "gastro", "remeras", "sponsors", "gastos", "resumen"].includes(saved)) return saved;
+    } catch {}
+    return "inscripcion";
+  });
+  function setTab(t) {
+    setTabRaw(t);
+    try {
+      window.localStorage.setItem("urqui-last-tab", t);
+    } catch {}
+  }
   const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved | error
   const [loaded, setLoaded] = useState(false);
 
@@ -4949,10 +4961,17 @@ function TorneoPlanner() {
 function UrquiApp() {
   const [view, setView] = useState(() => {
     try {
-      const saved = window.localStorage; // not used for persistence, just guard
+      const saved = window.localStorage.getItem("urqui-last-view");
+      if (saved === "cronograma" || saved === "torneo") return saved;
     } catch {}
     return "cronograma";
   });
+  function changeView(v) {
+    setView(v);
+    try {
+      window.localStorage.setItem("urqui-last-view", v);
+    } catch {}
+  }
   const views = [{
     id: "cronograma",
     label: "Cronograma diario",
@@ -4998,7 +5017,7 @@ function UrquiApp() {
     }
   }, views.map(v => /*#__PURE__*/React.createElement("button", {
     key: v.id,
-    onClick: () => setView(v.id),
+    onClick: () => changeView(v.id),
     style: {
       display: "flex",
       alignItems: "center",
