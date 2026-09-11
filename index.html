@@ -1823,6 +1823,7 @@ function Row({
       gap: 10
     }
   }, /*#__PURE__*/React.createElement("span", {
+    className: bold || t ? "torneo-row-total-label" : "",
     style: {
       color: labelColor,
       fontSize: labelSize,
@@ -1831,6 +1832,7 @@ function Row({
       fontFamily: FONT
     }
   }, label), /*#__PURE__*/React.createElement("span", {
+    className: bold || t ? "torneo-row-total-value" : "",
     style: {
       color: color || BLANCO,
       fontWeight: t ? weight : bold ? 700 : 500,
@@ -2316,7 +2318,11 @@ function InsumoRow({
       fontFamily: FONT,
       textDecoration: item.comprado ? "line-through" : "none"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "torneo-insumo-cant"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "torneo-mini-label"
+  }, "Cant."), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
     placeholder: "0",
@@ -2329,7 +2335,6 @@ function InsumoRow({
         cantidad
       });
     },
-    className: "torneo-insumo-cant",
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -2341,9 +2346,14 @@ function InsumoRow({
       outline: "none",
       fontFamily: FONT,
       textAlign: "center",
-      minWidth: 0
+      minWidth: 0,
+      width: "100%"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "torneo-insumo-costo"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "torneo-mini-label"
+  }, "Costo"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
     placeholder: "$ 0",
@@ -2352,7 +2362,6 @@ function InsumoRow({
       ...item,
       costo: parseMoneyInput(e.target.value)
     }),
-    className: "torneo-insumo-costo",
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -2364,9 +2373,14 @@ function InsumoRow({
       outline: "none",
       fontFamily: FONT,
       textAlign: "right",
-      minWidth: 0
+      minWidth: 0,
+      width: "100%"
     }
-  }), /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "torneo-insumo-total"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "torneo-mini-label"
+  }, "Total"), /*#__PURE__*/React.createElement("input", {
     type: "text",
     inputMode: "numeric",
     placeholder: "$ 0",
@@ -2379,7 +2393,6 @@ function InsumoRow({
         costo: cantidad > 0 ? Math.round(nuevoTotal / cantidad) : 0
       });
     },
-    className: "torneo-insumo-total",
     style: {
       background: GRIS,
       border: `1px solid ${BORDE}`,
@@ -2391,9 +2404,10 @@ function InsumoRow({
       textAlign: "right",
       outline: "none",
       padding: "7px 5px",
-      minWidth: 0
+      minWidth: 0,
+      width: "100%"
     }
-  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
+  })), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: onDelete,
     size: 14,
     className: "torneo-insumo-del"
@@ -3085,6 +3099,7 @@ function TorneoPlanner() {
       padding: "0 0 48px"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
+        .torneo-mini-label { display: none; }
         @media (max-width: 820px) {
           .torneo-desktop-only { display: none !important; }
           .torneo-table-header { display: none !important; }
@@ -3114,7 +3129,7 @@ function TorneoPlanner() {
 
           /* Insumos: 2 filas — check+foto+desc arriba, cantidad/costo/total/borrar abajo */
           .torneo-insumo-row {
-            grid-template-columns: 18px 24px 1fr 1fr 1fr 1fr !important;
+            grid-template-columns: 18px 44px 1fr 1fr 1fr 1fr !important;
             grid-template-areas: "check photo desc desc desc desc" ". . cant costo total del" !important;
             row-gap: 4px !important;
             padding-bottom: 7px !important;
@@ -3123,9 +3138,16 @@ function TorneoPlanner() {
           .torneo-insumo-check { grid-area: check; }
           .torneo-insumo-photo { grid-area: photo; }
           .torneo-insumo-desc { grid-area: desc; font-size: 13px !important; width: 100% !important; }
-          .torneo-insumo-cant { grid-area: cant; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
-          .torneo-insumo-costo { grid-area: costo; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
-          .torneo-insumo-total { grid-area: total; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
+          .torneo-insumo-cant { grid-area: cant; display: flex; flex-direction: column; }
+          .torneo-insumo-costo { grid-area: costo; display: flex; flex-direction: column; }
+          .torneo-insumo-total { grid-area: total; display: flex; flex-direction: column; }
+          .torneo-insumo-cant input, .torneo-insumo-costo input, .torneo-insumo-total input {
+            font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important;
+          }
+          .torneo-mini-label {
+            display: block; font-size: 8.5px; color: #5B5E68; text-transform: uppercase;
+            letter-spacing: 0.03em; margin-bottom: 1px; font-family: 'Montserrat', system-ui, sans-serif;
+          }
           .torneo-insumo-del { grid-area: del; }
 
           /* Kit por equipo: foto a la izquierda (ocupa las 2 filas), descripción arriba a la derecha, precio abajo */
@@ -3170,6 +3192,10 @@ function TorneoPlanner() {
           .torneo-numinput-label { display: inline !important; margin-bottom: 0 !important; white-space: nowrap; }
           .torneo-numinput-value { flex: 0 1 auto !important; }
           .torneo-numinput-value input { width: auto !important; text-align: right !important; font-size: 14px !important; }
+
+          /* Totales en negrita (Row bold/tier): 2 unidades más chico en mobile */
+          .torneo-row-total-label { font-size: 12px !important; }
+          .torneo-row-total-value { font-size: 13px !important; }
         }
       `), /*#__PURE__*/React.createElement("div", {
     style: {
