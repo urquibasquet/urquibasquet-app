@@ -3744,20 +3744,11 @@ function TorneoPlanner() {
       marginTop: 6,
       fontFamily: FONT
     }
-  }, "Recaudado por premio: ", /*#__PURE__*/React.createElement("strong", {
+  }, "Es como si cada premio saldría: ", /*#__PURE__*/React.createElement("strong", {
     style: {
       color: BLANCO
     }
-  }, fmt(cantPremios > 0 ? recaudadoSorteo / cantPremios : 0))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: MUTED,
-      fontSize: 10.5,
-      marginTop: 4,
-      fontFamily: FONT,
-      fontStyle: "italic",
-      lineHeight: 1.4
-    }
-  }, "Es un promedio: lo recaudado total del sorteo dividido entre los premios — no lo que costó cada premio en particular, sino cuánto \"cubre\" cada uno según lo vendido."))), /*#__PURE__*/React.createElement("p", {
+  }, fmt(cantPremios > 0 ? recaudadoSorteo / cantPremios : 0))))), /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
       fontSize: 11.5,
