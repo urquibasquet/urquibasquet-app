@@ -3119,6 +3119,7 @@ function TorneoPlanner() {
           }
           .torneo-edit-only-pointer { pointer-events: none !important; }
           .torneo-photo-btn { width: 44px !important; height: 44px !important; pointer-events: none !important; }
+          .torneo-insumo-photo { width: 52px !important; height: 52px !important; }
 
           /* Lo que vendemos: apila el nombre arriba, precio/cantidad/ganancia abajo en fila */
           .torneo-bebida-row { display: block !important; margin-bottom: 8px !important; padding-bottom: 8px !important; border-bottom: 1px solid #2A2D35; }
@@ -3129,7 +3130,7 @@ function TorneoPlanner() {
 
           /* Insumos: 2 filas — check+foto+desc arriba, cantidad/costo/total/borrar abajo */
           .torneo-insumo-row {
-            grid-template-columns: 18px 44px 1fr 1fr 1fr 1fr !important;
+            grid-template-columns: 18px 52px 0.7fr 1.1fr 1.1fr 36px !important;
             grid-template-areas: "check photo desc desc desc desc" ". . cant costo total del" !important;
             row-gap: 4px !important;
             padding-bottom: 7px !important;
@@ -3192,6 +3193,7 @@ function TorneoPlanner() {
           .torneo-numinput-label { display: inline !important; margin-bottom: 0 !important; white-space: nowrap; }
           .torneo-numinput-value { flex: 0 1 auto !important; }
           .torneo-numinput-value input { width: auto !important; text-align: right !important; font-size: 14px !important; }
+          .torneo-numinput-value span { display: none !important; }
 
           /* Totales en negrita (Row bold/tier): 2 unidades más chico en mobile */
           .torneo-row-total-label { font-size: 12px !important; }
