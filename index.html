@@ -1895,10 +1895,12 @@ function NumInput({
   money = false
 }) {
   return /*#__PURE__*/React.createElement("div", {
+    className: "torneo-numinput",
     style: {
       marginBottom: 8
     }
   }, /*#__PURE__*/React.createElement("label", {
+    className: "torneo-numinput-label",
     style: {
       color: CLARO,
       fontSize: 11.5,
@@ -1907,6 +1909,7 @@ function NumInput({
       fontFamily: FONT
     }
   }, label), /*#__PURE__*/React.createElement("div", {
+    className: "torneo-numinput-value",
     style: {
       display: "flex",
       alignItems: "center",
@@ -2009,6 +2012,7 @@ function BebidaRow({
       minWidth: 0
     }
   }), /*#__PURE__*/React.createElement("div", {
+    className: "torneo-bebida-ganancia",
     style: {
       background: GRIS,
       border: `1px solid ${BORDE}`,
@@ -3095,6 +3099,8 @@ function TorneoPlanner() {
             background: transparent !important;
             border: none !important;
             padding: 1px 1px !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
           }
           .torneo-edit-only-pointer { pointer-events: none !important; }
           .torneo-photo-btn { width: 44px !important; height: 44px !important; pointer-events: none !important; }
@@ -3104,21 +3110,22 @@ function TorneoPlanner() {
           .torneo-bebida-label { display: block; font-size: 13px !important; margin-bottom: 3px; }
           .torneo-bebida-fields { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
           .torneo-bebida-fields input, .torneo-bebida-fields div { font-size: 13px !important; padding: 1px !important; }
+          .torneo-bebida-ganancia { background: transparent !important; border: none !important; }
 
           /* Insumos: 2 filas — check+foto+desc arriba, cantidad/costo/total/borrar abajo */
           .torneo-insumo-row {
-            grid-template-columns: auto auto 1fr 1fr !important;
-            grid-template-areas: "check photo desc desc" "cant costo total del" !important;
+            grid-template-columns: 18px 24px 1fr 1fr 1fr 1fr !important;
+            grid-template-areas: "check photo desc desc desc desc" ". . cant costo total del" !important;
             row-gap: 4px !important;
             padding-bottom: 7px !important;
             border-bottom: 1px solid #2A2D35;
           }
           .torneo-insumo-check { grid-area: check; }
           .torneo-insumo-photo { grid-area: photo; }
-          .torneo-insumo-desc { grid-area: desc; font-size: 13px !important; }
-          .torneo-insumo-cant { grid-area: cant; font-size: 12.5px !important; padding: 1px !important; }
-          .torneo-insumo-costo { grid-area: costo; font-size: 12.5px !important; padding: 1px !important; }
-          .torneo-insumo-total { grid-area: total; font-size: 12.5px !important; padding: 1px !important; }
+          .torneo-insumo-desc { grid-area: desc; font-size: 13px !important; width: 100% !important; }
+          .torneo-insumo-cant { grid-area: cant; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
+          .torneo-insumo-costo { grid-area: costo; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
+          .torneo-insumo-total { grid-area: total; font-size: 12.5px !important; padding: 1px !important; width: 100% !important; min-width: 0 !important; }
           .torneo-insumo-del { grid-area: del; }
 
           /* Kit por equipo: foto a la izquierda (ocupa las 2 filas), descripción arriba a la derecha, precio abajo */
@@ -3136,9 +3143,18 @@ function TorneoPlanner() {
           .torneo-kit-precio { grid-area: precio; font-size: 13.5px !important; }
           .torneo-kit-del { grid-area: del; }
 
-          /* Gastos varios: que envuelva prolijo */
-          .torneo-gasto-row { row-gap: 4px !important; padding-bottom: 8px !important; border-bottom: 1px solid #2A2D35; }
-          .torneo-gasto-desc { flex-basis: 100% !important; font-size: 13.5px !important; }
+          /* Gastos varios: descripción + precio en la misma línea, observación abajo completa */
+          .torneo-gasto-row {
+            display: grid !important;
+            grid-template-columns: 1fr auto auto !important;
+            grid-template-areas: "desc precio del" "obs obs obs" !important;
+            row-gap: 3px !important; column-gap: 8px !important;
+            padding-bottom: 8px !important; border-bottom: 1px solid #2A2D35;
+          }
+          .torneo-gasto-desc { grid-area: desc; font-size: 13.5px !important; }
+          .torneo-gasto-precio { grid-area: precio; font-size: 13.5px !important; }
+          .torneo-gasto-obs { grid-area: obs; font-size: 12px !important; }
+          .torneo-gasto-del { grid-area: del; }
 
           /* Remeras: precio arriba, input+sufijo abajo */
           .torneo-precio-row { row-gap: 2px !important; }
@@ -3148,6 +3164,12 @@ function TorneoPlanner() {
           /* Talles: en mobile, apilado (como antes) — en web queda Talle|número en la misma celda */
           .torneo-talle-cell { flex-direction: column !important; gap: 2px !important; }
           .torneo-talle-cell input { text-align: center !important; font-size: 13.5px !important; }
+
+          /* Inscripción: "Equipos inscriptos: 16" en una sola línea, en vez de etiqueta arriba e input abajo */
+          .torneo-numinput { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important; margin-bottom: 8px !important; }
+          .torneo-numinput-label { display: inline !important; margin-bottom: 0 !important; white-space: nowrap; }
+          .torneo-numinput-value { flex: 0 1 auto !important; }
+          .torneo-numinput-value input { width: auto !important; text-align: right !important; font-size: 14px !important; }
         }
       `), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4439,14 +4461,37 @@ function TorneoPlanner() {
       fontSize: 12,
       fontFamily: FONT
     }
-  }, detalle)))), /*#__PURE__*/React.createElement(Slider, {
-    label: "Aporte en efectivo por sponsor (opcional)",
-    min: 0,
-    max: 100000,
-    step: 5000,
-    value: aporteSponsor,
-    onChange: setAporteSponsor
-  }), aporteSponsor > 0 && /*#__PURE__*/React.createElement("div", {
+  }, detalle)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      color: CLARO,
+      fontSize: 11.5,
+      display: "block",
+      marginBottom: 4,
+      fontFamily: FONT
+    }
+  }, "Aporte en efectivo por sponsor (opcional)"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    inputMode: "numeric",
+    placeholder: "$ 0",
+    value: fmtMoneyInput(aporteSponsor),
+    onChange: e => setAporteSponsor(parseMoneyInput(e.target.value)),
+    style: {
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 7,
+      color: NARANJA,
+      padding: "7px 10px",
+      width: "100%",
+      fontSize: 13,
+      fontWeight: 700,
+      outline: "none",
+      fontFamily: FONT
+    }
+  })), aporteSponsor > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       background: GRIS_CLARO,
       borderRadius: 7,
@@ -4555,6 +4600,7 @@ function TorneoPlanner() {
       };
       setManualItems(n);
     },
+    className: "torneo-gasto-precio",
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -4581,6 +4627,7 @@ function TorneoPlanner() {
       };
       setManualItems(n);
     },
+    className: "torneo-gasto-obs",
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
@@ -4595,7 +4642,8 @@ function TorneoPlanner() {
     }
   }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: () => setManualItems(manualItems.filter((_, j) => j !== i)),
-    size: 16
+    size: 16,
+    className: "torneo-gasto-del"
   }))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setManualItems([...manualItems, {
       desc: "",
