@@ -139,6 +139,20 @@
   .modal .btn-cerrar { background: transparent; border: 1px solid var(--borde); color: var(--claro); border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; width: 100%; }
   .modal .btn-confirmar { background: var(--naranja); border: none; color: var(--negro); font-weight: 700; border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; width: 100%; margin-bottom: 8px; }
   .aviso-error { background: rgba(225,77,77,0.12); border: 1px solid var(--rojo); color: var(--rojo); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 12px; text-align: left; }
+
+  .pendiente-row {
+    display: flex; gap: 12px; background: var(--gris-claro); border: 1px solid var(--borde);
+    border-radius: 10px; padding: 12px; margin-bottom: 10px;
+  }
+  .pendiente-row img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; flex-shrink: 0; cursor: pointer; }
+  .pendiente-row .info { flex: 1; min-width: 0; font-size: 12.5px; }
+  .pendiente-row .info .nombre { font-weight: 700; color: var(--blanco); }
+  .pendiente-row .acciones { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .btn-confirmar-pago, .btn-rechazar-pago {
+    border: none; border-radius: 6px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  }
+  .btn-confirmar-pago { background: var(--verde); color: var(--negro); }
+  .btn-rechazar-pago { background: transparent; border: 1px solid var(--rojo); color: var(--rojo); }
 </style>
 </head>
 <body>
@@ -162,6 +176,14 @@
     <div class="packs" id="packs"></div>
 
     <button class="btn-continuar" id="btnContinuar" disabled>Continuar →</button>
+
+    <div style="text-align:center; margin-top:30px;">
+      <button class="link-consultar" id="btnAbrirPanel" style="opacity:0.5;">(club) Panel de comprobantes pendientes</button>
+      <br>
+      <button class="link-consultar" id="btnExportarCompradores" style="opacity:0.5;">
+        (club) Exportar lista de compradores confirmados
+      </button>
+    </div>
   </div>
 
   <!-- PANTALLA 2: elegir numeros -->
@@ -191,8 +213,8 @@
 
 <div class="overlay" id="overlayReservado">
   <div class="modal">
-    <h2>✅ ¡Números reservados!</h2>
-    <p><strong style="color:var(--naranja)">Transferí ahora mismo</strong> para asegurar tus números — quedan reservados solo por un rato corto, y si no llega el pago, otra persona te los puede ganar. Este es tu código — también te lo mandamos por mail, guardalo:</p>
+    <h2>🎉 ¡Ya compraste tus números!</h2>
+    <p>Para dejarlo confirmado, <strong style="color:var(--naranja)">transferí ahora mismo</strong> — quedan a tu nombre solo por un rato corto, y si no llega el pago, se liberan. Este es tu código — también te lo mandamos por mail, guardalo:</p>
     <div class="codigo" id="codigoReserva">—</div>
     <p style="margin-bottom:8px;">Números: <strong id="numerosReservados" style="color:var(--blanco)"></strong> · Total: <strong id="totalReservado" style="color:var(--naranja)"></strong></p>
     <p style="background:rgba(255,209,102,0.1); border:1px solid var(--amarillo); color:var(--amarillo); border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:14px;">
@@ -210,6 +232,10 @@
       <div id="nombreArchivoComprobante" style="font-size:11.5px; color:var(--muted); margin-bottom:10px;"></div>
       <div id="errorComprobante" class="aviso-error" style="display:none;"></div>
       <button class="btn-confirmar" id="btnEnviarComprobante" disabled>Enviar comprobante</button>
+      <a id="btnEnviarWhatsapp" href="#" target="_blank" rel="noopener" style="display:none; text-align:center; text-decoration:none; margin-top:8px;
+        background:#25D366; color:#0B1B0F; font-weight:700; border-radius:8px; padding:10px 18px; font-size:13px; width:100%; box-sizing:border-box;">
+        📱 Avisar también por WhatsApp
+      </a>
     </div>
 
     <button class="btn-cerrar" id="btnCerrarModal">Cerrar</button>
@@ -248,10 +274,22 @@
   </div>
 </div>
 
+<div class="overlay" id="overlayPanel">
+  <div class="modal" style="max-width:600px; max-height:85vh; overflow-y:auto;">
+    <h2>📋 Comprobantes pendientes</h2>
+    <div id="listaPendientes" style="text-align:left;">
+      <p style="color:var(--muted); font-size:13px;">Cargando...</p>
+    </div>
+    <button class="btn-confirmar" id="btnDescargarPendientesExcel" style="margin-top:14px;">📊 Descargar como Excel</button>
+    <button class="btn-cerrar" id="btnCerrarPanel">Cerrar</button>
+  </div>
+</div>
+
 <script src="firebase-config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
   // ── Config ──
@@ -558,6 +596,7 @@
     document.getElementById("errorComprobante").style.display = "none";
     document.getElementById("btnEnviarComprobante").textContent = "Enviar comprobante";
     document.getElementById("btnEnviarComprobante").disabled = true;
+    document.getElementById("btnEnviarWhatsapp").style.display = "none";
     archivoComprobante = null;
     document.getElementById("overlayReservado").classList.add("show");
   }
@@ -655,6 +694,8 @@
 
       btn.textContent = "Comprobante enviado ✓";
       document.getElementById("nombreArchivoComprobante").textContent = "Ya avisamos al club — te confirmamos por mail cuando esté revisado.";
+
+      mostrarBotonWhatsapp(reservaActual);
     } catch (e) {
       console.error("Error al enviar el comprobante:", e);
       errEl.textContent = "No se pudo enviar. Probá de nuevo.";
@@ -707,7 +748,7 @@
 
     const estado = data.estado || "pendiente";
     const badgeWrap = document.getElementById("estadoBadgeWrap");
-    const textos = { pendiente: "⏳ Pendiente de confirmar", confirmado: "✅ Pago confirmado", rechazado: "⚠ No se pudo confirmar el pago" };
+    const textos = { pendiente: "🎉 ¡Compra registrada! Confirmando tu pago", confirmado: "✅ Pago confirmado", rechazado: "⚠ No se pudo confirmar el pago" };
     badgeWrap.innerHTML = '<span class="estado-badge ' + estado + '">' + (textos[estado] || estado) + '</span>';
 
     const certWrap = document.getElementById("certificadoWrap");
@@ -788,6 +829,176 @@
     a.download = "certificado-urqui-basquet.png";
     a.click();
   };
+
+
+  // ── (club) Exportar lista de compradores confirmados, para importar en el Contador de Ventas ──
+  document.getElementById("btnExportarCompradores").onclick = async () => {
+    const btn = document.getElementById("btnExportarCompradores");
+    btn.textContent = "Buscando compradores confirmados...";
+    try {
+      const snap = await db.collection("comprobantes").where("estado", "==", "confirmado").get();
+      if (snap.empty) {
+        alert("Todavía no hay compradores confirmados.");
+        btn.textContent = "(club) Exportar lista de compradores confirmados";
+        return;
+      }
+      const filas = [["Codigo", "Nombre", "Numeros", "Pack", "Total"]];
+      snap.forEach(doc => {
+        const d = doc.data();
+        filas.push([d.codigo, d.nombre, (d.numeros || []).join(", "), d.pack || "", d.total || 0]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(filas);
+      ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 10 }, { wch: 12 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Compradores");
+      const fecha = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, "urqui-compradores-" + fecha + ".xlsx");
+    } catch (e) {
+      console.error("Error al exportar compradores:", e);
+      alert("No se pudo exportar. Probá de nuevo.");
+    }
+    btn.textContent = "(club) Exportar lista de compradores confirmados";
+  };
+
+  // ── (club) Panel de comprobantes pendientes: confirmar pago (pasa a rojo/pagado) o rechazar (libera el numero) ──
+  document.getElementById("btnAbrirPanel").onclick = () => {
+    document.getElementById("overlayPanel").classList.add("show");
+    cargarPendientes();
+  };
+  document.getElementById("btnCerrarPanel").onclick = () => {
+    document.getElementById("overlayPanel").classList.remove("show");
+  };
+
+  async function cargarPendientes() {
+    const cont = document.getElementById("listaPendientes");
+    cont.innerHTML = '<p style="color:var(--muted); font-size:13px;">Cargando...</p>';
+    try {
+      const snap = await db.collection("comprobantes").where("estado", "==", "pendiente").get();
+      if (snap.empty) {
+        cont.innerHTML = '<p style="color:var(--muted); font-size:13px;">No hay comprobantes pendientes por ahora.</p>';
+        return;
+      }
+      cont.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        const row = document.createElement("div");
+        row.className = "pendiente-row";
+        row.innerHTML =
+          '<img src="' + d.comprobanteImg + '" onclick="window.open(this.src)" />' +
+          '<div class="info">' +
+            '<div class="nombre">' + (d.nombre || "—") + '</div>' +
+            '<div>' + (d.email || "") + '</div>' +
+            '<div>Números: <strong>' + (d.numeros || []).join(", ") + '</strong></div>' +
+            '<div>Total: <strong style="color:var(--naranja)">' + fmtPrecio(d.total || 0) + '</strong> · Código: ' + d.codigo + '</div>' +
+          '</div>' +
+          '<div class="acciones">' +
+            '<button class="btn-confirmar-pago" data-codigo="' + d.codigo + '">✅ Confirmar</button>' +
+            '<button class="btn-rechazar-pago" data-codigo="' + d.codigo + '">❌ Rechazar</button>' +
+          '</div>';
+        cont.appendChild(row);
+      });
+
+      cont.querySelectorAll(".btn-confirmar-pago").forEach(btn => {
+        btn.onclick = () => confirmarPago(btn.dataset.codigo, btn);
+      });
+      cont.querySelectorAll(".btn-rechazar-pago").forEach(btn => {
+        btn.onclick = () => rechazarPago(btn.dataset.codigo, btn);
+      });
+    } catch (e) {
+      console.error("Error al cargar pendientes:", e);
+      cont.innerHTML = '<p style="color:var(--rojo); font-size:13px;">No se pudo cargar. Probá de nuevo.</p>';
+    }
+  }
+
+  async function confirmarPago(codigo, btn) {
+    btn.disabled = true;
+    btn.textContent = "Confirmando...";
+    try {
+      const compSnap = await db.collection("comprobantes").doc(codigo).get();
+      if (!compSnap.exists) throw new Error("No se encontró el comprobante.");
+      const d = compSnap.data();
+
+      const batch = db.batch();
+      batch.update(db.collection("comprobantes").doc(codigo), { estado: "confirmado" });
+      (d.numeros || []).forEach(num => {
+        batch.set(db.collection("sorteoNumeros").doc(num), {
+          estado: "pagado", codigo: d.codigo, nombre: d.nombre, email: d.email,
+        }, { merge: true });
+      });
+      await batch.commit();
+      cargarPendientes();
+    } catch (e) {
+      console.error("Error al confirmar el pago:", e);
+      alert("No se pudo confirmar. Probá de nuevo.");
+      btn.disabled = false;
+      btn.textContent = "✅ Confirmar";
+    }
+  }
+
+  async function rechazarPago(codigo, btn) {
+    const ok = window.confirm("¿Rechazar este pago? Los números vuelven a quedar disponibles para otra persona.");
+    if (!ok) return;
+    btn.disabled = true;
+    btn.textContent = "Rechazando...";
+    try {
+      const compSnap = await db.collection("comprobantes").doc(codigo).get();
+      if (!compSnap.exists) throw new Error("No se encontró el comprobante.");
+      const d = compSnap.data();
+
+      const batch = db.batch();
+      batch.update(db.collection("comprobantes").doc(codigo), { estado: "rechazado" });
+      (d.numeros || []).forEach(num => batch.delete(db.collection("sorteoNumeros").doc(num)));
+      await batch.commit();
+      cargarPendientes();
+    } catch (e) {
+      console.error("Error al rechazar el pago:", e);
+      alert("No se pudo rechazar. Probá de nuevo.");
+      btn.disabled = false;
+      btn.textContent = "❌ Rechazar";
+    }
+  }
+
+  // ── Descargar los comprobantes pendientes como Excel ──
+  document.getElementById("btnDescargarPendientesExcel").onclick = async () => {
+    const btn = document.getElementById("btnDescargarPendientesExcel");
+    btn.disabled = true;
+    btn.textContent = "Generando...";
+    try {
+      const snap = await db.collection("comprobantes").where("estado", "==", "pendiente").get();
+      if (snap.empty) {
+        alert("No hay comprobantes pendientes por ahora.");
+      } else {
+        const filas = [["Codigo", "Nombre", "Email", "Numeros", "Total"]];
+        snap.forEach(doc => {
+          const d = doc.data();
+          filas.push([d.codigo, d.nombre || "", d.email || "", (d.numeros || []).join(", "), d.total || 0]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(filas);
+        ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 26 }, { wch: 24 }, { wch: 12 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Pendientes");
+        const fecha = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, "urqui-pendientes-" + fecha + ".xlsx");
+      }
+    } catch (e) {
+      console.error("Error al descargar pendientes:", e);
+      alert("No se pudo generar el Excel. Probá de nuevo.");
+    }
+    btn.disabled = false;
+    btn.textContent = "📊 Descargar como Excel";
+  };
+
+  // ── Aviso por WhatsApp con mensaje pre-armado (lo manda el comprador desde su propio celu) ──
+  const WHATSAPP_CLUB = "5493415780997";
+  function mostrarBotonWhatsapp(reserva) {
+    const mensaje =
+      "Hola! Reservé el " + reserva.pack + " — números " + reserva.numeros.join(", ") +
+      " por " + fmtPrecio(reserva.precio) + ". Mi código es " + reserva.codigo +
+      ". Ya subí el comprobante de la transferencia, ¿me confirman el pago? Gracias!";
+    const link = document.getElementById("btnEnviarWhatsapp");
+    link.href = "https://wa.me/" + WHATSAPP_CLUB + "?text=" + encodeURIComponent(mensaje);
+    link.style.display = "block";
+  }
 </script>
 </body>
 </html>
