@@ -105,6 +105,8 @@
   .key:active { transform: translateY(2px); box-shadow: 0 1px 0 0 #1E8F52, 0 2px 2px rgba(0,0,0,0.3); }
   .key.ocupado { background: var(--rojo); color: #3A0E0E; cursor: not-allowed; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
   .key.ocupado:active { transform: none; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado { background: var(--naranja); color: #3A2100; cursor: not-allowed; box-shadow: 0 3px 0 0 #B8641E, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado:active { transform: none; box-shadow: 0 3px 0 0 #B8641E, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido { background: var(--azul); color: var(--negro); box-shadow: 0 3px 0 0 #3E75D6, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido:active { box-shadow: 0 1px 0 0 #3E75D6, 0 2px 2px rgba(0,0,0,0.3); }
   .key:disabled { opacity: 0.55; }
@@ -172,7 +174,8 @@
     <div class="leyenda">
       <div class="item"><span class="swatch" style="background:var(--verde)"></span> Disponible</div>
       <div class="item"><span class="swatch" style="background:var(--azul)"></span> Elegido por vos</div>
-      <div class="item"><span class="swatch" style="background:var(--rojo)"></span> Ocupado</div>
+      <div class="item"><span class="swatch" style="background:var(--naranja)"></span> Reservado (puede liberarse)</div>
+      <div class="item"><span class="swatch" style="background:var(--rojo)"></span> Vendido</div>
     </div>
 
     <div class="grid-wrap">
@@ -189,7 +192,7 @@
 <div class="overlay" id="overlayReservado">
   <div class="modal">
     <h2>✅ ¡Números reservados!</h2>
-    <p>Tenés <strong id="minutosRestantes">20</strong> minutos para transferir. Poné este código en el concepto de la transferencia — sin él no podemos identificar tu pago:</p>
+    <p><strong style="color:var(--naranja)">Transferí ahora mismo</strong> para asegurar tus números — quedan reservados solo por un rato corto, y si no llega el pago, otra persona te los puede ganar. Poné este código en el concepto de la transferencia — sin él no podemos identificar tu pago:</p>
     <div class="codigo" id="codigoReserva">—</div>
     <p style="margin-bottom:8px;">Números: <strong id="numerosReservados" style="color:var(--blanco)"></strong> · Total: <strong id="totalReservado" style="color:var(--naranja)"></strong></p>
     <p style="background:rgba(255,209,102,0.1); border:1px solid var(--amarillo); color:var(--amarillo); border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:14px;">
@@ -398,25 +401,29 @@
     actualizarSeleccionUI();
   }
 
-  function estaOcupado(num) {
+  function estadoVisual(num) {
     const info = numerosOcupados[num];
-    if (!info) return false;
-    if (info.estado === "pagado") return true;
+    if (!info) return "disponible";
+    if (info.estado === "pagado") return "pagado";
     if (info.estado === "reservado") {
-      if (info.expiraMs && info.expiraMs < Date.now()) return false;
-      return true;
+      if (info.expiraMs && info.expiraMs < Date.now()) return "disponible"; // vencida, se libera sola
+      return "reservado";
     }
-    return false;
+    return "disponible";
+  }
+  function estaOcupado(num) {
+    return estadoVisual(num) !== "disponible";
   }
 
   function actualizarSeleccionUI() {
     keys.forEach(k => {
       const num = k.dataset.num;
-      const ocupado = estaOcupado(num);
+      const estado = estadoVisual(num);
       const elegido = numerosElegidos.includes(num);
-      k.classList.toggle("ocupado", ocupado && !elegido);
+      k.classList.toggle("ocupado", estado === "pagado" && !elegido);
+      k.classList.toggle("reservado", estado === "reservado" && !elegido);
       k.classList.toggle("elegido", elegido);
-      k.disabled = ocupado && !elegido;
+      k.disabled = estado !== "disponible" && !elegido;
     });
 
     document.getElementById("cantElegidos").textContent = numerosElegidos.length;
@@ -513,7 +520,6 @@
     document.getElementById("codigoReserva").textContent = reserva.codigo;
     document.getElementById("numerosReservados").textContent = reserva.numeros.join(", ");
     document.getElementById("totalReservado").textContent = fmtPrecio(reserva.precio);
-    document.getElementById("minutosRestantes").textContent = MINUTOS_RESERVA;
     document.getElementById("errorGuardarDatos").style.display = "none";
     document.getElementById("inputNombre").value = "";
     document.getElementById("inputEmail").value = "";
