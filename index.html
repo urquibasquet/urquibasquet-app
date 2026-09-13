@@ -3614,8 +3614,16 @@ function TorneoPlanner() {
     style: {
       display: "flex",
       alignItems: "center",
+      justifyContent: "space-between",
       gap: 10,
-      marginBottom: 12
+      marginBottom: 12,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10
     }
   }, /*#__PURE__*/React.createElement("label", {
     style: {
@@ -3644,7 +3652,26 @@ function TorneoPlanner() {
       fontFamily: FONT_MONO,
       textAlign: "center"
     }
-  })), /*#__PURE__*/React.createElement("p", {
+  })), /*#__PURE__*/React.createElement("a", {
+    href: "elegir-numero.html",
+    target: "_blank",
+    rel: "noopener",
+    className: "cs-btn torneo-desktop-only",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      background: `${AZUL}18`,
+      border: `1px solid ${AZUL}`,
+      borderRadius: 8,
+      color: AZUL,
+      padding: "8px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      textDecoration: "none",
+      fontFamily: FONT
+    }
+  }, "🎟 Talonario")), /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
       fontSize: 12.5,
