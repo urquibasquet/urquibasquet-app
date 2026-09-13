@@ -192,11 +192,11 @@
 <div class="overlay" id="overlayReservado">
   <div class="modal">
     <h2>✅ ¡Números reservados!</h2>
-    <p><strong style="color:var(--naranja)">Transferí ahora mismo</strong> para asegurar tus números — quedan reservados solo por un rato corto, y si no llega el pago, otra persona te los puede ganar. Poné este código en el concepto de la transferencia — sin él no podemos identificar tu pago:</p>
+    <p><strong style="color:var(--naranja)">Transferí ahora mismo</strong> para asegurar tus números — quedan reservados solo por un rato corto, y si no llega el pago, otra persona te los puede ganar. Este es tu código — también te lo mandamos por mail, guardalo:</p>
     <div class="codigo" id="codigoReserva">—</div>
     <p style="margin-bottom:8px;">Números: <strong id="numerosReservados" style="color:var(--blanco)"></strong> · Total: <strong id="totalReservado" style="color:var(--naranja)"></strong></p>
     <p style="background:rgba(255,209,102,0.1); border:1px solid var(--amarillo); color:var(--amarillo); border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:14px;">
-      📍 El día del evento tenés que pasar por el <strong>buffet</strong> a retirar tus números físicos del talonario.
+      📍 El día del evento pasá por el <strong>buffet</strong> y mostrá el mail con este código para retirar tus números físicos del talonario.
     </p>
     <input type="text" id="inputNombre" placeholder="Tu nombre y apellido" />
     <input type="email" id="inputEmail" placeholder="Tu email (para el comprobante)" />
@@ -333,7 +333,11 @@
     window.scrollTo(0, 0);
   }
 
-  document.getElementById("btnVolver").onclick = () => mostrarPantalla(1);
+  document.getElementById("btnVolver").onclick = async () => {
+    await liberarSeleccionActual();
+    actualizarSeleccionUI();
+    mostrarPantalla(1);
+  };
 
   // ── Estado ──
   let packElegido = null;
@@ -377,6 +381,7 @@
   // ── Render grilla ──
   const gridEl = document.getElementById("grid");
   const keys = [];
+  const keyByNum = {};
   for (let i = 1; i <= TOTAL_NUMEROS; i++) {
     const num = pad(i);
     const key = document.createElement("button");
@@ -386,19 +391,58 @@
     key.onclick = () => clickNumero(num);
     gridEl.appendChild(key);
     keys.push(key);
+    keyByNum[num] = key;
   }
 
-  function clickNumero(num) {
+  async function clickNumero(num) {
     if (!packElegido) return;
+
+    // Si ya estaba elegido por mi: lo destildo y libero la reserva temporal
+    if (numerosElegidos.includes(num)) {
+      numerosElegidos = numerosElegidos.filter(n => n !== num);
+      actualizarSeleccionUI();
+      try { await db.collection("sorteoNumeros").doc(num).delete(); }
+      catch (e) { console.error("Error al liberar el número:", e); }
+      return;
+    }
+
     if (estaOcupado(num)) return;
-    const idx = numerosElegidos.indexOf(num);
-    if (idx !== -1) {
-      numerosElegidos.splice(idx, 1);
-    } else {
-      if (numerosElegidos.length >= packElegido.num) return;
+    if (numerosElegidos.length >= packElegido.num) return;
+
+    // Reservo ESTE número al tocarlo (no al final) — asi nadie mas te lo puede sacar mientras elegis el resto
+    const key = keyByNum[num];
+    if (key) key.disabled = true;
+    try {
+      await db.runTransaction(async (tx) => {
+        const ref = db.collection("sorteoNumeros").doc(num);
+        const snap = await tx.get(ref);
+        if (snap.exists) {
+          const data = snap.data();
+          const vencida = data.estado === "reservado" && data.expira && data.expira.toMillis() < Date.now();
+          if (data.estado === "pagado" || (data.estado === "reservado" && !vencida)) {
+            throw new Error("ocupado");
+          }
+        }
+        tx.set(ref, { estado: "reservado", expira: new Date(Date.now() + MINUTOS_RESERVA * 60 * 1000) });
+      });
       numerosElegidos.push(num);
+    } catch (e) {
+      if (e.message === "ocupado") alert("Uy, justo se te adelantaron con el número " + num + " — elegí otro.");
+      else console.error("Error al reservar el número:", e);
     }
     actualizarSeleccionUI();
+  }
+
+  // Si vuelve a elegir pack sin terminar, libera lo que tenia elegido a medias
+  async function liberarSeleccionActual() {
+    const pendientes = [...numerosElegidos];
+    numerosElegidos = [];
+    if (pendientes.length === 0) return;
+    try {
+      const batch = db.batch();
+      pendientes.forEach(num => batch.delete(db.collection("sorteoNumeros").doc(num)));
+      await batch.commit();
+    } catch (e) { console.error("Error al liberar la selección:", e); }
   }
 
   function estadoVisual(num) {
@@ -466,33 +510,23 @@
     if (!packElegido || numerosElegidos.length !== packElegido.num) return;
     const btn = document.getElementById("btnReservar");
     btn.disabled = true;
-    btn.textContent = "Verificando...";
+    btn.textContent = "Confirmando...";
 
     const codigo = generarCodigo();
     const numerosAReservar = [...numerosElegidos];
     const expiraEn = new Date(Date.now() + MINUTOS_RESERVA * 60 * 1000);
 
     try {
-      await db.runTransaction(async (tx) => {
-        const ocupadosAhora = [];
-        for (const num of numerosAReservar) {
-          const ref = db.collection("sorteoNumeros").doc(num);
-          const snap = await tx.get(ref);
-          if (snap.exists) {
-            const data = snap.data();
-            const vencida = data.estado === "reservado" && data.expira && data.expira.toMillis() < Date.now();
-            if (data.estado === "pagado" || (data.estado === "reservado" && !vencida)) ocupadosAhora.push(num);
-          }
-        }
-        if (ocupadosAhora.length > 0) { const err = new Error("ocupados"); err.numeros = ocupadosAhora; throw err; }
-        numerosAReservar.forEach(num => {
-          const ref = db.collection("sorteoNumeros").doc(num);
-          tx.set(ref, {
-            estado: "reservado", codigo: codigo, packId: packElegido.id, precioTotal: packElegido.precio,
-            reservadoEn: firebase.firestore.FieldValue.serverTimestamp(), expira: expiraEn,
-          });
+      // Cada número ya quedó reservado individualmente al tocarlo — acá solo unificamos
+      // el código y renovamos el tiempo, para que los N números queden atados a esta compra.
+      const batch = db.batch();
+      numerosAReservar.forEach(num => {
+        batch.set(db.collection("sorteoNumeros").doc(num), {
+          estado: "reservado", codigo: codigo, packId: packElegido.id, precioTotal: packElegido.precio,
+          reservadoEn: firebase.firestore.FieldValue.serverTimestamp(), expira: expiraEn,
         });
       });
+      await batch.commit();
 
       reservaActual = { codigo, numeros: numerosAReservar, precio: packElegido.precio, pack: packElegido.nombre };
       mostrarModalReserva(reservaActual);
@@ -501,14 +535,8 @@
       [...packsWrap.children].forEach(b => b.classList.remove("activo"));
       document.getElementById("btnContinuar").disabled = true;
     } catch (err) {
-      if (err.numeros) {
-        document.getElementById("mensajeError").textContent = "Justo se adelantaron con: " + err.numeros.join(", ") + ". Elegí otros números disponibles.";
-        numerosElegidos = numerosElegidos.filter(n => !err.numeros.includes(n));
-        document.getElementById("overlayError").classList.add("show");
-      } else {
-        console.error("Error al reservar:", err);
-        alert("No se pudo completar la reserva. Probá de nuevo.");
-      }
+      console.error("Error al confirmar la reserva:", err);
+      alert("No se pudo completar la reserva. Probá de nuevo.");
       actualizarSeleccionUI();
     }
     btn.textContent = "Reservar mis números";
@@ -557,6 +585,21 @@
       document.getElementById("btnGuardarDatos").textContent = "Guardado ✓";
       document.getElementById("btnGuardarDatos").disabled = true;
       document.getElementById("pasoComprobante").style.display = "block";
+
+      // Mandamos el código por mail ACÁ, apenas se guardan los datos — todavía no pagó,
+      // pero así el código le queda guardado en su casilla para usar el día del evento.
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          codigo: reservaActual.codigo,
+          nombre: reservaActual.nombre,
+          email: reservaActual.email,
+          numeros: reservaActual.numeros.join(", "),
+          pack: reservaActual.pack,
+          total: fmtPrecio(reservaActual.precio),
+        });
+      } catch (mailErr) {
+        console.error("Los datos se guardaron, pero el mail con el código no se pudo enviar:", mailErr);
+      }
     } catch (e) {
       console.error("Error al guardar datos:", e);
       errEl.textContent = "No se pudo guardar. Probá de nuevo.";
