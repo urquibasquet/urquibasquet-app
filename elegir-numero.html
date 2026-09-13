@@ -244,13 +244,13 @@
     </div>
 
     <input type="file" accept="image/*" id="inputComprobante" style="display:none;" />
-    <button class="btn-confirmar" id="btnElegirComprobante" style="background:var(--gris-claro); color:var(--blanco); border:1px solid var(--borde);">📎 Elegir foto del comprobante</button>
+    <button class="btn-confirmar" id="btnElegirComprobante" style="background:var(--gris-claro); color:var(--blanco); border:1px solid var(--borde);">📎 Subir comprobante</button>
     <div id="nombreArchivoComprobante" style="font-size:11.5px; color:var(--muted); margin-bottom:10px;"></div>
 
     <div id="errorGuardarDatos" class="aviso-error" style="display:none;"></div>
     <button class="btn-confirmar" id="btnConfirmarTodo">✅ Confirmar y avisar por WhatsApp</button>
     <div id="estadoConfirmado" style="display:none; text-align:center; color:var(--verde); font-size:13px; font-weight:700; margin-top:10px;">
-      ✅ Confirmado — se abrió WhatsApp para que envíes el aviso.
+      ✅ Avisamos al club por WhatsApp. Cuando confirmen tu pago, te van a pasar ahí mismo tu código — guardalo, lo pedimos el día del evento en el buffet.
     </div>
 
     <button class="btn-cerrar" id="btnCerrarModal">Cerrar</button>
@@ -297,7 +297,7 @@
 <script>
 
   // ── Config ──
-  const TOTAL_NUMEROS = 1000;
+  let TOTAL_NUMEROS = 1000; // se reemplaza por el valor real de la app al cargar la pagina
   const MINUTOS_RESERVA = 20;
   const TORNEO_DOC_KEY = "urqui-torneo-7ma"; // mismo documento que usa la app principal
   let PACKS = []; // se completa con los valores reales de la app al cargar la pagina
@@ -317,7 +317,7 @@
     console.error("Error inicializando Firebase:", e);
   }
 
-  // ── Leer los packs actuales desde la misma base que usa la app principal ──
+  // ── Leer los packs y la cantidad de números actuales desde la misma base que usa la app principal ──
   async function cargarPacksDesdeApp() {
     try {
       const snap = await db.collection("urqui").doc(TORNEO_DOC_KEY).get();
@@ -328,7 +328,9 @@
         { id: "pack2", num: data.pack2Num, precio: data.pack2Precio, nombre: "Pack 2" },
         { id: "pack3", num: data.pack3Num, precio: data.pack3Precio, nombre: "Pack 3" },
       ];
+      TOTAL_NUMEROS = data.totalNumeros || TOTAL_NUMEROS;
       renderPacks();
+      renderGrid();
     } catch (e) {
       console.error("Error al cargar los packs:", e);
       document.getElementById("packs").innerHTML =
@@ -422,18 +424,24 @@
 
   // ── Render grilla ──
   const gridEl = document.getElementById("grid");
-  const keys = [];
-  const keyByNum = {};
-  for (let i = 1; i <= TOTAL_NUMEROS; i++) {
-    const num = pad(i);
-    const key = document.createElement("button");
-    key.className = "key";
-    key.textContent = num;
-    key.dataset.num = num;
-    key.onclick = () => clickNumero(num);
-    gridEl.appendChild(key);
-    keys.push(key);
-    keyByNum[num] = key;
+  let keys = [];
+  let keyByNum = {};
+  function renderGrid() {
+    gridEl.innerHTML = "";
+    keys = [];
+    keyByNum = {};
+    for (let i = 1; i <= TOTAL_NUMEROS; i++) {
+      const num = pad(i);
+      const key = document.createElement("button");
+      key.className = "key";
+      key.textContent = num;
+      key.dataset.num = num;
+      key.onclick = () => clickNumero(num);
+      gridEl.appendChild(key);
+      keys.push(key);
+      keyByNum[num] = key;
+    }
+    actualizarSeleccionUI();
   }
 
   async function clickNumero(num) {

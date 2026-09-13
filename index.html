@@ -3075,6 +3075,7 @@ function TorneoPlanner() {
   const [cargandoPendientes, setCargandoPendientes] = useState(false);
   const [accionandoCodigo, setAccionandoCodigo] = useState(null);
   const [exportandoCompradores, setExportandoCompradores] = useState(false);
+  const [descargandoContador, setDescargandoContador] = useState(false);
   function fmtPrecioNum(n) {
     return "$" + Math.round(n || 0).toLocaleString("es-AR");
   }
@@ -3112,6 +3113,10 @@ function TorneoPlanner() {
         });
       });
       await batch.commit();
+      try {
+        await navigator.clipboard.writeText(comprobante.codigo);
+      } catch (clipErr) {/* portapapeles no disponible, no pasa nada */}
+      alert("✅ Confirmado. Respondele por WhatsApp con su código:\n\n" + comprobante.codigo + "\n\n(ya lo copié al portapapeles)");
       await cargarPendientes();
     } catch (e) {
       console.error("Error al confirmar el pago:", e);
@@ -3171,13 +3176,30 @@ function TorneoPlanner() {
     }
     setExportandoCompradores(false);
   }
-  function descargarContadorVentas() {
+  async function descargarContadorVentas() {
     try {
       const b64 = window.__CONTADOR_VENTAS_B64;
       const binStr = atob(b64);
       const bytes = new Uint8Array(binStr.length);
       for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
       let texto = new TextDecoder("utf-8").decode(bytes);
+
+      // Traemos los compradores ya confirmados, para que el buscador del Contador de Ventas
+      // funcione offline apenas se abre, sin tener que importar un Excel aparte.
+      let compradoresMap = {};
+      try {
+        const snap = await window.__fb.db.collection("comprobantes").where("estado", "==", "confirmado").get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          compradoresMap[d.codigo] = {
+            nombre: d.nombre,
+            numeros: d.numeros || [],
+            pack: d.pack || ""
+          };
+        });
+      } catch (compErr) {
+        console.error("No se pudieron traer los compradores confirmados, se descarga sin ellos:", compErr);
+      }
       const reemplazos = {
         __PACK1_NUM__: pack1Num,
         __PACK1_PRECIO__: pack1Precio,
@@ -3197,7 +3219,8 @@ function TorneoPlanner() {
         __RJ_M__: rjM,
         __RJ_L__: rjL,
         __RJ_XL__: rjXL,
-        __RJ_XXL__: rjXXL
+        __RJ_XXL__: rjXXL,
+        __COMPRADORES_JSON__: JSON.stringify(compradoresMap)
       };
       Object.keys(reemplazos).forEach(clave => {
         texto = texto.split(clave).join(String(reemplazos[clave]));
@@ -3563,7 +3586,12 @@ function TorneoPlanner() {
       display: "none"
     }
   }), /*#__PURE__*/React.createElement("button", {
-    onClick: descargarContadorVentas,
+    onClick: async () => {
+      setDescargandoContador(true);
+      await descargarContadorVentas();
+      setDescargandoContador(false);
+    },
+    disabled: descargandoContador,
     className: "cs-btn torneo-desktop-only",
     style: {
       display: "flex",
@@ -3579,7 +3607,7 @@ function TorneoPlanner() {
       cursor: "pointer",
       fontFamily: FONT
     }
-  }, "🖩 Contador Ventas"))), /*#__PURE__*/React.createElement("p", {
+  }, "🖩 ", descargandoContador ? "Generando..." : "Contador Ventas"))), /*#__PURE__*/React.createElement("p", {
     className: "torneo-desktop-only",
     style: {
       color: MUTED,
@@ -5401,7 +5429,35 @@ function TorneoPlanner() {
       fontWeight: 700,
       color: BLANCO
     }
-  }, comp.nombre || "—"), /*#__PURE__*/React.createElement("div", null, "Números: ", /*#__PURE__*/React.createElement("strong", {
+  }, comp.nombre || "—"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      margin: "3px 0"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: FONT_MONO,
+      fontWeight: 800,
+      color: NARANJA,
+      fontSize: 13
+    }
+  }, comp.codigo), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      navigator.clipboard.writeText(comp.codigo).catch(() => {});
+    },
+    title: "Copiar código",
+    style: {
+      background: "transparent",
+      border: `1px solid ${BORDE}`,
+      borderRadius: 5,
+      padding: "1px 6px",
+      fontSize: 10,
+      cursor: "pointer",
+      color: CLARO
+    }
+  }, "📋")), /*#__PURE__*/React.createElement("div", null, "Números: ", /*#__PURE__*/React.createElement("strong", {
     style: {
       color: BLANCO
     }
