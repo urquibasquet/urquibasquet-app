@@ -3141,10 +3141,11 @@ function TorneoPlanner() {
         });
       });
       await batch.commit();
+      const mensajeParaPegar = "¡Confirmado! ✅ Tu pago quedó registrado.\n\n" + "El día del evento pasá por el buffet a retirar tu número físico del talonario con el código:\n\n" + comprobante.codigo;
       try {
-        await navigator.clipboard.writeText(comprobante.codigo);
+        await navigator.clipboard.writeText(mensajeParaPegar);
       } catch (clipErr) {/* portapapeles no disponible, no pasa nada */}
-      alert("✅ Confirmado. Respondele por WhatsApp con su código:\n\n" + comprobante.codigo + "\n\n(ya lo copié al portapapeles)");
+      alert("✅ Confirmado. Ya copié este mensaje al portapapeles — pegalo como respuesta en el WhatsApp que te mandó:\n\n" + mensajeParaPegar);
       await cargarPendientes();
     } catch (e) {
       console.error("Error al confirmar el pago:", e);
