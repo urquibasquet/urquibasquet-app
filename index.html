@@ -3076,6 +3076,34 @@ function TorneoPlanner() {
   const [accionandoCodigo, setAccionandoCodigo] = useState(null);
   const [exportandoCompradores, setExportandoCompradores] = useState(false);
   const [descargandoContador, setDescargandoContador] = useState(false);
+  const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
+  const [historialPagos, setHistorialPagos] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [busquedaHistorial, setBusquedaHistorial] = useState("");
+  async function cargarHistorial() {
+    setCargandoHistorial(true);
+    try {
+      const snap = await window.__fb.db.collection("comprobantes").get();
+      const lista = [];
+      snap.forEach(doc => lista.push(doc.data()));
+      lista.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+      setHistorialPagos(lista);
+    } catch (e) {
+      console.error("Error al cargar el historial:", e);
+      alert("No se pudo cargar el historial. Probá de nuevo.");
+    }
+    setCargandoHistorial(false);
+  }
+  function abrirModalHistorial() {
+    setBusquedaHistorial("");
+    setModalHistorialAbierto(true);
+    cargarHistorial();
+  }
+  const historialFiltrado = historialPagos.filter(p => {
+    const q = busquedaHistorial.trim().toLowerCase();
+    if (!q) return true;
+    return (p.codigo || "").toLowerCase().includes(q) || (p.nombre || "").toLowerCase().includes(q);
+  });
   function fmtPrecioNum(n) {
     return "$" + Math.round(n || 0).toLocaleString("es-AR");
   }
@@ -3148,22 +3176,18 @@ function TorneoPlanner() {
       if (snap.empty) {
         alert("Todavía no hay compradores confirmados.");
       } else {
-        const filas = [["Codigo", "Nombre", "Numeros", "Pack", "Total"]];
-        snap.forEach(doc => {
-          const d = doc.data();
-          filas.push([d.codigo, d.nombre, (d.numeros || []).join(", "), d.pack || "", d.total || 0]);
-        });
+        const lista = [];
+        snap.forEach(doc => lista.push(doc.data()));
+        lista.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+        const filas = [["Nombre y Apellido", "Código", "Check"]];
+        lista.forEach(d => filas.push([d.nombre || "", d.codigo, ""]));
         const ws = window.XLSX.utils.aoa_to_sheet(filas);
         ws["!cols"] = [{
-          wch: 12
+          wch: 30
         }, {
-          wch: 24
-        }, {
-          wch: 24
+          wch: 14
         }, {
           wch: 10
-        }, {
-          wch: 12
         }];
         const wb = window.XLSX.utils.book_new();
         window.XLSX.utils.book_append_sheet(wb, ws, "Compradores");
@@ -3819,6 +3843,23 @@ function TorneoPlanner() {
       fontFamily: FONT
     }
   }, "📋 Comprobantes pendientes"), /*#__PURE__*/React.createElement("button", {
+    onClick: abrirModalHistorial,
+    className: "cs-btn torneo-desktop-only",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      background: `${CLARO}18`,
+      border: `1px solid ${CLARO}`,
+      borderRadius: 8,
+      color: CLARO,
+      padding: "8px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "🗂 Pagos"), /*#__PURE__*/React.createElement("button", {
     onClick: exportarCompradoresConfirmados,
     disabled: exportandoCompradores,
     className: "cs-btn torneo-desktop-only",
@@ -5500,6 +5541,161 @@ function TorneoPlanner() {
     }
   }, "❌ Rechazar")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setModalPendientesAbierto(false),
+    style: {
+      background: "transparent",
+      border: `1px solid ${BORDE}`,
+      color: CLARO,
+      borderRadius: 8,
+      padding: "10px 18px",
+      fontSize: 13,
+      cursor: "pointer",
+      width: "100%",
+      marginTop: 10,
+      fontFamily: FONT
+    }
+  }, "Cerrar"))), modalHistorialAbierto && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setModalHistorialAbierto(false),
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      zIndex: 1000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 16,
+      padding: 24,
+      maxWidth: 620,
+      width: "100%",
+      maxHeight: "85vh",
+      overflowY: "auto",
+      fontFamily: FONT
+    }
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      fontSize: 18,
+      margin: "0 0 14px",
+      color: BLANCO
+    }
+  }, "🗂 Historial de pagos"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Buscar por código o nombre...",
+    value: busquedaHistorial,
+    onChange: e => setBusquedaHistorial(e.target.value),
+    style: {
+      width: "100%",
+      background: NEGRO,
+      border: `1px solid ${NARANJA}`,
+      borderRadius: 8,
+      color: BLANCO,
+      padding: "10px 12px",
+      fontSize: 13,
+      outline: "none",
+      marginBottom: 14,
+      fontFamily: FONT,
+      boxSizing: "border-box"
+    }
+  }), cargandoHistorial && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "Cargando..."), !cargandoHistorial && historialFiltrado.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "No se encontraron pagos."), !cargandoHistorial && historialFiltrado.map(comp => {
+    const colorEstado = comp.estado === "confirmado" ? VERDE : comp.estado === "rechazado" ? ROJO : AMARILLO;
+    const textoEstado = comp.estado === "confirmado" ? "✅ Confirmado" : comp.estado === "rechazado" ? "❌ Rechazado" : "⏳ Pendiente";
+    return /*#__PURE__*/React.createElement("div", {
+      key: comp.codigo,
+      style: {
+        display: "flex",
+        gap: 12,
+        background: GRIS_CLARO,
+        border: `1px solid ${BORDE}`,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 10
+      }
+    }, comp.comprobanteImg && /*#__PURE__*/React.createElement("img", {
+      src: comp.comprobanteImg,
+      onClick: () => window.open(comp.comprobanteImg),
+      style: {
+        width: 60,
+        height: 60,
+        objectFit: "cover",
+        borderRadius: 8,
+        flexShrink: 0,
+        cursor: "pointer"
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: 12.5,
+        color: CLARO
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 700,
+        color: BLANCO
+      }
+    }, comp.nombre || "—"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        margin: "3px 0"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: FONT_MONO,
+        fontWeight: 800,
+        color: NARANJA,
+        fontSize: 13
+      }
+    }, comp.codigo), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        navigator.clipboard.writeText(comp.codigo).catch(() => {});
+      },
+      title: "Copiar código",
+      style: {
+        background: "transparent",
+        border: `1px solid ${BORDE}`,
+        borderRadius: 5,
+        padding: "1px 6px",
+        fontSize: 10,
+        cursor: "pointer",
+        color: CLARO
+      }
+    }, "📋")), /*#__PURE__*/React.createElement("div", null, "Números: ", /*#__PURE__*/React.createElement("strong", {
+      style: {
+        color: BLANCO
+      }
+    }, (comp.numeros || []).join(", "))), /*#__PURE__*/React.createElement("div", null, "Total: ", /*#__PURE__*/React.createElement("strong", {
+      style: {
+        color: NARANJA
+      }
+    }, fmtPrecioNum(comp.total)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flexShrink: 0,
+        fontSize: 11.5,
+        fontWeight: 700,
+        color: colorEstado,
+        alignSelf: "center"
+      }
+    }, textoEstado));
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setModalHistorialAbierto(false),
     style: {
       background: "transparent",
       border: `1px solid ${BORDE}`,

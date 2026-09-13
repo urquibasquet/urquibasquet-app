@@ -292,8 +292,6 @@
 <script src="firebase-config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
   // ── Config ──
@@ -301,12 +299,6 @@
   const MINUTOS_RESERVA = 20;
   const TORNEO_DOC_KEY = "urqui-torneo-7ma"; // mismo documento que usa la app principal
   let PACKS = []; // se completa con los valores reales de la app al cargar la pagina
-
-  // ── EmailJS ──
-  const EMAILJS_PUBLIC_KEY = "YTwITLPaBT4mbGBaw";
-  const EMAILJS_SERVICE_ID = "service_35jkmph";
-  const EMAILJS_TEMPLATE_ID = "template_5hwndej";
-  try { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); } catch (e) { console.error("Error inicializando EmailJS:", e); }
 
   // ── Firebase ──
   let db;
@@ -668,19 +660,6 @@
         subidoEn: firebase.firestore.FieldValue.serverTimestamp(),
       });
       await batch.commit();
-
-      // Aviso por mail al club (best effort — si falla, no bloquea el resto del proceso)
-      try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          codigo: reservaActual.codigo,
-          nombre: reservaActual.nombre,
-          numeros: reservaActual.numeros.join(", "),
-          pack: reservaActual.pack,
-          total: fmtPrecio(reservaActual.precio),
-        });
-      } catch (mailErr) {
-        console.error("El comprobante se guardó, pero el mail de aviso no se pudo enviar:", mailErr);
-      }
 
       // El modal pasa a solo lectura, y se abre WhatsApp con el aviso pre-armado
       document.getElementById("modalReserva").classList.add("bloqueado");
