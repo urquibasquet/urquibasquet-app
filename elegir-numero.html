@@ -232,9 +232,9 @@
 
 <div class="overlay" id="overlayReservado">
   <div class="modal" id="modalReserva" style="max-width:440px;">
-    <h2>🎉 ¡Ya compraste tus números!</h2>
+    <h2>Finalizá la compra</h2>
     <p id="resumenSeleccion" style="margin-bottom:6px;"></p>
-    <p style="font-size:11.5px; color:var(--muted); margin-bottom:12px;">Código: <strong id="codigoReserva" style="color:var(--claro); font-family:'JetBrains Mono',monospace;">—</strong></p>
+    <span id="codigoReserva" style="display:none;"></span>
 
     <div class="codigo" id="numerosReservados" style="font-size:20px;">—</div>
     <p style="font-size:20px; font-weight:800; color:var(--naranja); margin:10px 0 14px;">
@@ -998,9 +998,8 @@
   const WHATSAPP_CLUB = "5493415780997";
   function abrirWhatsapp(reserva) {
     const mensaje =
-      "Hola! Compré el " + reserva.pack + " — números " + reserva.numeros.join(", ") +
-      " por " + fmtPrecio(reserva.precio) + ". Mi código es " + reserva.codigo +
-      ". Ya subí el comprobante de la transferencia, ¿me confirman el pago? Gracias!";
+      "Hola! Soy " + reserva.nombre + ". Compré el " + reserva.pack + " — números " + reserva.numeros.join(", ") +
+      " por " + fmtPrecio(reserva.precio) + ". Ya subí el comprobante de la transferencia, ¿me confirman el pago? Gracias!";
     const url = "https://wa.me/" + WHATSAPP_CLUB + "?text=" + encodeURIComponent(mensaje);
     window.open(url, "_blank", "noopener");
   }
