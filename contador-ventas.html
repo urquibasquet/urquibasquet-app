@@ -453,10 +453,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   // ── Buscador de comprador (por codigo, para entregar los numeros fisicos) ──
   var COMPRADORES_KEY = "urqui-contador-compradores";
-  var compradores = {}; // { "URQ-4821": { nombre, numeros: [...] } }
+  // Estos vienen ya cargados desde la app al descargar el archivo (compradores confirmados a esa fecha)
+  var COMPRADORES_INICIALES = {};
+  var compradores = Object.assign({}, COMPRADORES_INICIALES);
   try {
     var raw = window.localStorage.getItem(COMPRADORES_KEY);
-    if (raw) compradores = JSON.parse(raw);
+    if (raw) compradores = Object.assign({}, compradores, JSON.parse(raw));
   } catch (e) { console.error("No se pudo leer la lista de compradores:", e); }
 
   document.getElementById("btnBuscarComprador").onclick = () => {
