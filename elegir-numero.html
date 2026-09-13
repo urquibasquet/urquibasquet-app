@@ -140,6 +140,25 @@
   .modal .btn-confirmar { background: var(--naranja); border: none; color: var(--negro); font-weight: 700; border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; width: 100%; margin-bottom: 8px; }
   .aviso-error { background: rgba(225,77,77,0.12); border: 1px solid var(--rojo); color: var(--rojo); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 12px; text-align: left; }
 
+  .bloque-advertencia {
+    background: rgba(255,209,102,0.1); border: 1px solid var(--amarillo); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; color: var(--amarillo); text-align: left; margin-bottom: 14px;
+  }
+  .bloque-advertencia .titulo { font-weight: 800; margin-bottom: 3px; }
+  .bloque-transferencia {
+    background: var(--gris-claro); border: 1px solid var(--borde); border-radius: 8px;
+    padding: 10px 12px; text-align: left; margin-bottom: 12px;
+  }
+  .bloque-transferencia .titulo { font-size: 12px; font-weight: 800; color: var(--claro); margin-bottom: 6px; }
+  .bloque-transferencia .fila { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+  .bloque-transferencia .fila span { color: var(--muted); }
+  .bloque-transferencia .fila strong { color: var(--blanco); font-family: 'JetBrains Mono', monospace; }
+
+  #modalReserva.bloqueado input,
+  #modalReserva.bloqueado #btnElegirComprobante {
+    opacity: 0.55; pointer-events: none;
+  }
+
   .pendiente-row {
     display: flex; gap: 12px; background: var(--gris-claro); border: 1px solid var(--borde);
     border-radius: 10px; padding: 12px; margin-bottom: 10px;
@@ -212,30 +231,37 @@
 </div>
 
 <div class="overlay" id="overlayReservado">
-  <div class="modal">
+  <div class="modal" id="modalReserva" style="max-width:440px;">
     <h2>🎉 ¡Ya compraste tus números!</h2>
-    <p>Para dejarlo confirmado, <strong style="color:var(--naranja)">transferí ahora mismo</strong> — quedan a tu nombre solo por un rato corto, y si no llega el pago, se liberan. Este es tu código — también te lo mandamos por mail, guardalo:</p>
-    <div class="codigo" id="codigoReserva">—</div>
-    <p style="margin-bottom:8px;">Números: <strong id="numerosReservados" style="color:var(--blanco)"></strong> · Total: <strong id="totalReservado" style="color:var(--naranja)"></strong></p>
-    <p style="background:rgba(255,209,102,0.1); border:1px solid var(--amarillo); color:var(--amarillo); border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:14px;">
-      📍 El día del evento pasá por el <strong>buffet</strong> y mostrá el mail con este código para retirar tus números físicos del talonario.
-    </p>
-    <input type="text" id="inputNombre" placeholder="Tu nombre y apellido" />
-    <input type="email" id="inputEmail" placeholder="Tu email (para el comprobante)" />
-    <div id="errorGuardarDatos" class="aviso-error" style="display:none;"></div>
-    <button class="btn-confirmar" id="btnGuardarDatos">Guardar mis datos</button>
+    <p id="resumenSeleccion" style="margin-bottom:6px;"></p>
+    <p style="font-size:11.5px; color:var(--muted); margin-bottom:12px;">Código: <strong id="codigoReserva" style="color:var(--claro); font-family:'JetBrains Mono',monospace;">—</strong></p>
 
-    <div id="pasoComprobante" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--borde);">
-      <p style="margin-bottom:10px;">Ya hiciste la transferencia? Subí una foto o captura del comprobante — así avisamos al club para que confirme tu pago.</p>
-      <input type="file" accept="image/*" id="inputComprobante" style="display:none;" />
-      <button class="btn-confirmar" id="btnElegirComprobante" style="background:var(--gris-claro); color:var(--blanco); border:1px solid var(--borde);">📎 Elegir foto del comprobante</button>
-      <div id="nombreArchivoComprobante" style="font-size:11.5px; color:var(--muted); margin-bottom:10px;"></div>
-      <div id="errorComprobante" class="aviso-error" style="display:none;"></div>
-      <button class="btn-confirmar" id="btnEnviarComprobante" disabled>Enviar comprobante</button>
-      <a id="btnEnviarWhatsapp" href="#" target="_blank" rel="noopener" style="display:none; text-align:center; text-decoration:none; margin-top:8px;
-        background:#25D366; color:#0B1B0F; font-weight:700; border-radius:8px; padding:10px 18px; font-size:13px; width:100%; box-sizing:border-box;">
-        📱 Avisar también por WhatsApp
-      </a>
+    <div class="codigo" id="numerosReservados" style="font-size:20px;">—</div>
+    <p style="font-size:20px; font-weight:800; color:var(--naranja); margin:10px 0 14px;">
+      Total: <span id="totalReservado"></span>
+    </p>
+
+    <div class="bloque-advertencia">
+      <div class="titulo">⚠ Advertencia</div>
+      El día del evento pasá por el <strong>buffet</strong> a retirar el número físico del talonario.
+    </div>
+
+    <input type="text" id="inputNombre" placeholder="Tu nombre y apellido" />
+
+    <div class="bloque-transferencia">
+      <div class="titulo">💸 Datos para la transferencia</div>
+      <div class="fila"><span>Alias</span><strong>elurqui3x3</strong></div>
+      <div class="fila"><span>Monto</span><strong id="montoTransferencia"></strong></div>
+    </div>
+
+    <input type="file" accept="image/*" id="inputComprobante" style="display:none;" />
+    <button class="btn-confirmar" id="btnElegirComprobante" style="background:var(--gris-claro); color:var(--blanco); border:1px solid var(--borde);">📎 Elegir foto del comprobante</button>
+    <div id="nombreArchivoComprobante" style="font-size:11.5px; color:var(--muted); margin-bottom:10px;"></div>
+
+    <div id="errorGuardarDatos" class="aviso-error" style="display:none;"></div>
+    <button class="btn-confirmar" id="btnConfirmarTodo">✅ Confirmar y avisar por WhatsApp</button>
+    <div id="estadoConfirmado" style="display:none; text-align:center; color:var(--verde); font-size:13px; font-weight:700; margin-top:10px;">
+      ✅ Confirmado — se abrió WhatsApp para que envíes el aviso.
     </div>
 
     <button class="btn-cerrar" id="btnCerrarModal">Cerrar</button>
@@ -584,19 +610,23 @@
 
   function mostrarModalReserva(reserva) {
     document.getElementById("codigoReserva").textContent = reserva.codigo;
-    document.getElementById("numerosReservados").textContent = reserva.numeros.join(", ");
+    document.getElementById("resumenSeleccion").textContent =
+      "Elegiste el " + reserva.pack + " — " + reserva.numeros.length +
+      (reserva.numeros.length === 1 ? " número" : " números") + ".";
+    document.getElementById("numerosReservados").textContent = reserva.numeros.join("  ·  ");
     document.getElementById("totalReservado").textContent = fmtPrecio(reserva.precio);
+    document.getElementById("montoTransferencia").textContent = fmtPrecio(reserva.precio);
+
+    document.getElementById("modalReserva").classList.remove("bloqueado");
     document.getElementById("errorGuardarDatos").style.display = "none";
     document.getElementById("inputNombre").value = "";
-    document.getElementById("inputEmail").value = "";
-    document.getElementById("btnGuardarDatos").textContent = "Guardar mis datos";
-    document.getElementById("btnGuardarDatos").disabled = false;
-    document.getElementById("pasoComprobante").style.display = "none";
+    document.getElementById("inputNombre").disabled = false;
     document.getElementById("nombreArchivoComprobante").textContent = "";
-    document.getElementById("errorComprobante").style.display = "none";
-    document.getElementById("btnEnviarComprobante").textContent = "Enviar comprobante";
-    document.getElementById("btnEnviarComprobante").disabled = true;
-    document.getElementById("btnEnviarWhatsapp").style.display = "none";
+    document.getElementById("btnElegirComprobante").disabled = false;
+    document.getElementById("btnConfirmarTodo").style.display = "block";
+    document.getElementById("btnConfirmarTodo").disabled = false;
+    document.getElementById("btnConfirmarTodo").textContent = "✅ Confirmar y avisar por WhatsApp";
+    document.getElementById("estadoConfirmado").style.display = "none";
     archivoComprobante = null;
     document.getElementById("overlayReservado").classList.add("show");
   }
@@ -605,85 +635,60 @@
     mostrarPantalla(1);
   };
 
-  document.getElementById("btnGuardarDatos").onclick = async () => {
-    const nombre = document.getElementById("inputNombre").value.trim();
-    const email = document.getElementById("inputEmail").value.trim();
-    const errEl = document.getElementById("errorGuardarDatos");
-    if (!nombre || !email || !email.includes("@")) {
-      errEl.textContent = "Completá tu nombre y un email válido.";
-      errEl.style.display = "block";
-      return;
-    }
-    try {
-      const batch = db.batch();
-      reservaActual.numeros.forEach(num => batch.update(db.collection("sorteoNumeros").doc(num), { nombre, email }));
-      await batch.commit();
-      reservaActual.nombre = nombre;
-      reservaActual.email = email;
-      errEl.style.display = "none";
-      document.getElementById("btnGuardarDatos").textContent = "Guardado ✓";
-      document.getElementById("btnGuardarDatos").disabled = true;
-      document.getElementById("pasoComprobante").style.display = "block";
-
-      // Mandamos el código por mail ACÁ, apenas se guardan los datos — todavía no pagó,
-      // pero así el código le queda guardado en su casilla para usar el día del evento.
-      try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          codigo: reservaActual.codigo,
-          nombre: reservaActual.nombre,
-          email: reservaActual.email,
-          numeros: reservaActual.numeros.join(", "),
-          pack: reservaActual.pack,
-          total: fmtPrecio(reservaActual.precio),
-        });
-      } catch (mailErr) {
-        console.error("Los datos se guardaron, pero el mail con el código no se pudo enviar:", mailErr);
-      }
-    } catch (e) {
-      console.error("Error al guardar datos:", e);
-      errEl.textContent = "No se pudo guardar. Probá de nuevo.";
-      errEl.style.display = "block";
-    }
-  };
-
-  // ── Subir comprobante de transferencia ──
+  // ── Elegir comprobante ──
   let archivoComprobante = null;
   const inputComprobante = document.getElementById("inputComprobante");
   document.getElementById("btnElegirComprobante").onclick = () => inputComprobante.click();
   inputComprobante.onchange = (e) => {
     archivoComprobante = e.target.files && e.target.files[0];
-    document.getElementById("nombreArchivoComprobante").textContent = archivoComprobante ? archivoComprobante.name : "";
-    document.getElementById("btnEnviarComprobante").disabled = !archivoComprobante;
+    document.getElementById("nombreArchivoComprobante").textContent = archivoComprobante ? "📎 " + archivoComprobante.name : "";
   };
 
-  document.getElementById("btnEnviarComprobante").onclick = async () => {
-    if (!archivoComprobante) return;
-    const btn = document.getElementById("btnEnviarComprobante");
-    const errEl = document.getElementById("errorComprobante");
-    btn.disabled = true;
-    btn.textContent = "Enviando...";
+  // ── Confirmar todo junto: guarda nombre + comprobante, avisa al club por mail, y abre WhatsApp ──
+  document.getElementById("btnConfirmarTodo").onclick = async () => {
+    const nombre = document.getElementById("inputNombre").value.trim();
+    const errEl = document.getElementById("errorGuardarDatos");
     errEl.style.display = "none";
+
+    if (!nombre) {
+      errEl.textContent = "Completá tu nombre y apellido.";
+      errEl.style.display = "block";
+      return;
+    }
+    if (!archivoComprobante) {
+      errEl.textContent = "Subí la foto del comprobante antes de confirmar.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    const btn = document.getElementById("btnConfirmarTodo");
+    btn.disabled = true;
+    btn.textContent = "Confirmando...";
+
     try {
       const comprobanteDataUrl = await compressImage(archivoComprobante, 1000, 0.75);
 
-      // Se guarda el comprobante en Firestore, asociado al codigo de la reserva
-      await db.collection("comprobantes").doc(reservaActual.codigo).set({
+      reservaActual.nombre = nombre;
+
+      const batch = db.batch();
+      reservaActual.numeros.forEach(num => batch.update(db.collection("sorteoNumeros").doc(num), { nombre }));
+      batch.set(db.collection("comprobantes").doc(reservaActual.codigo), {
         codigo: reservaActual.codigo,
         nombre: reservaActual.nombre,
-        email: reservaActual.email,
         numeros: reservaActual.numeros,
+        pack: reservaActual.pack,
         total: reservaActual.precio,
         comprobanteImg: comprobanteDataUrl,
         estado: "pendiente",
         subidoEn: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      await batch.commit();
 
-      // Aviso por mail (al mail que hayas conectado en EmailJS) con los datos de la compra
+      // Aviso por mail al club (best effort — si falla, no bloquea el resto del proceso)
       try {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           codigo: reservaActual.codigo,
           nombre: reservaActual.nombre,
-          email: reservaActual.email,
           numeros: reservaActual.numeros.join(", "),
           pack: reservaActual.pack,
           total: fmtPrecio(reservaActual.precio),
@@ -692,16 +697,17 @@
         console.error("El comprobante se guardó, pero el mail de aviso no se pudo enviar:", mailErr);
       }
 
-      btn.textContent = "Comprobante enviado ✓";
-      document.getElementById("nombreArchivoComprobante").textContent = "Ya avisamos al club — te confirmamos por mail cuando esté revisado.";
-
-      mostrarBotonWhatsapp(reservaActual);
+      // El modal pasa a solo lectura, y se abre WhatsApp con el aviso pre-armado
+      document.getElementById("modalReserva").classList.add("bloqueado");
+      btn.style.display = "none";
+      document.getElementById("estadoConfirmado").style.display = "block";
+      abrirWhatsapp(reservaActual);
     } catch (e) {
-      console.error("Error al enviar el comprobante:", e);
-      errEl.textContent = "No se pudo enviar. Probá de nuevo.";
+      console.error("Error al confirmar:", e);
+      errEl.textContent = "No se pudo confirmar. Probá de nuevo.";
       errEl.style.display = "block";
       btn.disabled = false;
-      btn.textContent = "Enviar comprobante";
+      btn.textContent = "✅ Confirmar y avisar por WhatsApp";
     }
   };
 
@@ -990,14 +996,13 @@
 
   // ── Aviso por WhatsApp con mensaje pre-armado (lo manda el comprador desde su propio celu) ──
   const WHATSAPP_CLUB = "5493415780997";
-  function mostrarBotonWhatsapp(reserva) {
+  function abrirWhatsapp(reserva) {
     const mensaje =
-      "Hola! Reservé el " + reserva.pack + " — números " + reserva.numeros.join(", ") +
+      "Hola! Compré el " + reserva.pack + " — números " + reserva.numeros.join(", ") +
       " por " + fmtPrecio(reserva.precio) + ". Mi código es " + reserva.codigo +
       ". Ya subí el comprobante de la transferencia, ¿me confirman el pago? Gracias!";
-    const link = document.getElementById("btnEnviarWhatsapp");
-    link.href = "https://wa.me/" + WHATSAPP_CLUB + "?text=" + encodeURIComponent(mensaje);
-    link.style.display = "block";
+    const url = "https://wa.me/" + WHATSAPP_CLUB + "?text=" + encodeURIComponent(mensaje);
+    window.open(url, "_blank", "noopener");
   }
 </script>
 </body>
