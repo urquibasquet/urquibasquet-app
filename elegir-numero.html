@@ -195,14 +195,6 @@
     <div class="packs" id="packs"></div>
 
     <button class="btn-continuar" id="btnContinuar" disabled>Continuar →</button>
-
-    <div style="text-align:center; margin-top:30px;">
-      <button class="link-consultar" id="btnAbrirPanel" style="opacity:0.5;">(club) Panel de comprobantes pendientes</button>
-      <br>
-      <button class="link-consultar" id="btnExportarCompradores" style="opacity:0.5;">
-        (club) Exportar lista de compradores confirmados
-      </button>
-    </div>
   </div>
 
   <!-- PANTALLA 2: elegir numeros -->
@@ -236,10 +228,7 @@
     <p id="resumenSeleccion" style="margin-bottom:6px;"></p>
     <span id="codigoReserva" style="display:none;"></span>
 
-    <div class="codigo" id="numerosReservados" style="font-size:20px;">—</div>
-    <p style="font-size:20px; font-weight:800; color:var(--naranja); margin:10px 0 14px;">
-      Total: <span id="totalReservado"></span>
-    </p>
+    <div class="codigo" id="numerosReservados" style="font-size:20px; margin-bottom:14px;">—</div>
 
     <div class="bloque-advertencia">
       <div class="titulo">⚠ Advertencia</div>
@@ -297,17 +286,6 @@
     </div>
 
     <button class="btn-cerrar" id="btnCerrarConsulta" style="margin-top:10px;">Cerrar</button>
-  </div>
-</div>
-
-<div class="overlay" id="overlayPanel">
-  <div class="modal" style="max-width:600px; max-height:85vh; overflow-y:auto;">
-    <h2>📋 Comprobantes pendientes</h2>
-    <div id="listaPendientes" style="text-align:left;">
-      <p style="color:var(--muted); font-size:13px;">Cargando...</p>
-    </div>
-    <button class="btn-confirmar" id="btnDescargarPendientesExcel" style="margin-top:14px;">📊 Descargar como Excel</button>
-    <button class="btn-cerrar" id="btnCerrarPanel">Cerrar</button>
   </div>
 </div>
 
@@ -614,7 +592,6 @@
       "Elegiste el " + reserva.pack + " — " + reserva.numeros.length +
       (reserva.numeros.length === 1 ? " número" : " números") + ".";
     document.getElementById("numerosReservados").textContent = reserva.numeros.join("  ·  ");
-    document.getElementById("totalReservado").textContent = fmtPrecio(reserva.precio);
     document.getElementById("montoTransferencia").textContent = fmtPrecio(reserva.precio);
 
     document.getElementById("modalReserva").classList.remove("bloqueado");
@@ -836,163 +813,6 @@
     a.click();
   };
 
-
-  // ── (club) Exportar lista de compradores confirmados, para importar en el Contador de Ventas ──
-  document.getElementById("btnExportarCompradores").onclick = async () => {
-    const btn = document.getElementById("btnExportarCompradores");
-    btn.textContent = "Buscando compradores confirmados...";
-    try {
-      const snap = await db.collection("comprobantes").where("estado", "==", "confirmado").get();
-      if (snap.empty) {
-        alert("Todavía no hay compradores confirmados.");
-        btn.textContent = "(club) Exportar lista de compradores confirmados";
-        return;
-      }
-      const filas = [["Codigo", "Nombre", "Numeros", "Pack", "Total"]];
-      snap.forEach(doc => {
-        const d = doc.data();
-        filas.push([d.codigo, d.nombre, (d.numeros || []).join(", "), d.pack || "", d.total || 0]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(filas);
-      ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 10 }, { wch: 12 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Compradores");
-      const fecha = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, "urqui-compradores-" + fecha + ".xlsx");
-    } catch (e) {
-      console.error("Error al exportar compradores:", e);
-      alert("No se pudo exportar. Probá de nuevo.");
-    }
-    btn.textContent = "(club) Exportar lista de compradores confirmados";
-  };
-
-  // ── (club) Panel de comprobantes pendientes: confirmar pago (pasa a rojo/pagado) o rechazar (libera el numero) ──
-  document.getElementById("btnAbrirPanel").onclick = () => {
-    document.getElementById("overlayPanel").classList.add("show");
-    cargarPendientes();
-  };
-  document.getElementById("btnCerrarPanel").onclick = () => {
-    document.getElementById("overlayPanel").classList.remove("show");
-  };
-
-  async function cargarPendientes() {
-    const cont = document.getElementById("listaPendientes");
-    cont.innerHTML = '<p style="color:var(--muted); font-size:13px;">Cargando...</p>';
-    try {
-      const snap = await db.collection("comprobantes").where("estado", "==", "pendiente").get();
-      if (snap.empty) {
-        cont.innerHTML = '<p style="color:var(--muted); font-size:13px;">No hay comprobantes pendientes por ahora.</p>';
-        return;
-      }
-      cont.innerHTML = "";
-      snap.forEach(doc => {
-        const d = doc.data();
-        const row = document.createElement("div");
-        row.className = "pendiente-row";
-        row.innerHTML =
-          '<img src="' + d.comprobanteImg + '" onclick="window.open(this.src)" />' +
-          '<div class="info">' +
-            '<div class="nombre">' + (d.nombre || "—") + '</div>' +
-            '<div>' + (d.email || "") + '</div>' +
-            '<div>Números: <strong>' + (d.numeros || []).join(", ") + '</strong></div>' +
-            '<div>Total: <strong style="color:var(--naranja)">' + fmtPrecio(d.total || 0) + '</strong> · Código: ' + d.codigo + '</div>' +
-          '</div>' +
-          '<div class="acciones">' +
-            '<button class="btn-confirmar-pago" data-codigo="' + d.codigo + '">✅ Confirmar</button>' +
-            '<button class="btn-rechazar-pago" data-codigo="' + d.codigo + '">❌ Rechazar</button>' +
-          '</div>';
-        cont.appendChild(row);
-      });
-
-      cont.querySelectorAll(".btn-confirmar-pago").forEach(btn => {
-        btn.onclick = () => confirmarPago(btn.dataset.codigo, btn);
-      });
-      cont.querySelectorAll(".btn-rechazar-pago").forEach(btn => {
-        btn.onclick = () => rechazarPago(btn.dataset.codigo, btn);
-      });
-    } catch (e) {
-      console.error("Error al cargar pendientes:", e);
-      cont.innerHTML = '<p style="color:var(--rojo); font-size:13px;">No se pudo cargar. Probá de nuevo.</p>';
-    }
-  }
-
-  async function confirmarPago(codigo, btn) {
-    btn.disabled = true;
-    btn.textContent = "Confirmando...";
-    try {
-      const compSnap = await db.collection("comprobantes").doc(codigo).get();
-      if (!compSnap.exists) throw new Error("No se encontró el comprobante.");
-      const d = compSnap.data();
-
-      const batch = db.batch();
-      batch.update(db.collection("comprobantes").doc(codigo), { estado: "confirmado" });
-      (d.numeros || []).forEach(num => {
-        batch.set(db.collection("sorteoNumeros").doc(num), {
-          estado: "pagado", codigo: d.codigo, nombre: d.nombre, email: d.email,
-        }, { merge: true });
-      });
-      await batch.commit();
-      cargarPendientes();
-    } catch (e) {
-      console.error("Error al confirmar el pago:", e);
-      alert("No se pudo confirmar. Probá de nuevo.");
-      btn.disabled = false;
-      btn.textContent = "✅ Confirmar";
-    }
-  }
-
-  async function rechazarPago(codigo, btn) {
-    const ok = window.confirm("¿Rechazar este pago? Los números vuelven a quedar disponibles para otra persona.");
-    if (!ok) return;
-    btn.disabled = true;
-    btn.textContent = "Rechazando...";
-    try {
-      const compSnap = await db.collection("comprobantes").doc(codigo).get();
-      if (!compSnap.exists) throw new Error("No se encontró el comprobante.");
-      const d = compSnap.data();
-
-      const batch = db.batch();
-      batch.update(db.collection("comprobantes").doc(codigo), { estado: "rechazado" });
-      (d.numeros || []).forEach(num => batch.delete(db.collection("sorteoNumeros").doc(num)));
-      await batch.commit();
-      cargarPendientes();
-    } catch (e) {
-      console.error("Error al rechazar el pago:", e);
-      alert("No se pudo rechazar. Probá de nuevo.");
-      btn.disabled = false;
-      btn.textContent = "❌ Rechazar";
-    }
-  }
-
-  // ── Descargar los comprobantes pendientes como Excel ──
-  document.getElementById("btnDescargarPendientesExcel").onclick = async () => {
-    const btn = document.getElementById("btnDescargarPendientesExcel");
-    btn.disabled = true;
-    btn.textContent = "Generando...";
-    try {
-      const snap = await db.collection("comprobantes").where("estado", "==", "pendiente").get();
-      if (snap.empty) {
-        alert("No hay comprobantes pendientes por ahora.");
-      } else {
-        const filas = [["Codigo", "Nombre", "Email", "Numeros", "Total"]];
-        snap.forEach(doc => {
-          const d = doc.data();
-          filas.push([d.codigo, d.nombre || "", d.email || "", (d.numeros || []).join(", "), d.total || 0]);
-        });
-        const ws = XLSX.utils.aoa_to_sheet(filas);
-        ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 26 }, { wch: 24 }, { wch: 12 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Pendientes");
-        const fecha = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(wb, "urqui-pendientes-" + fecha + ".xlsx");
-      }
-    } catch (e) {
-      console.error("Error al descargar pendientes:", e);
-      alert("No se pudo generar el Excel. Probá de nuevo.");
-    }
-    btn.disabled = false;
-    btn.textContent = "📊 Descargar como Excel";
-  };
 
   // ── Aviso por WhatsApp con mensaje pre-armado (lo manda el comprador desde su propio celu) ──
   const WHATSAPP_CLUB = "5493415780997";

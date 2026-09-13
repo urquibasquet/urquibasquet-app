@@ -1707,6 +1707,7 @@ const CLARO = "#B7BAC2";
 const VERDE = "#35D0BA";
 const ROJO = "#FF6B6B";
 const AZUL = "#5B9DFF";
+const AMARILLO = "#FFD166";
 function IconBtn({
   icon: Icon,
   onClick,
@@ -3069,6 +3070,107 @@ function TorneoPlanner() {
     window.XLSX.writeFile(wb, `urqui-datos-${fecha}.xlsx`);
   }
   const fileInputExcelRef = useRef(null);
+  const [modalPendientesAbierto, setModalPendientesAbierto] = useState(false);
+  const [pendientes, setPendientes] = useState([]);
+  const [cargandoPendientes, setCargandoPendientes] = useState(false);
+  const [accionandoCodigo, setAccionandoCodigo] = useState(null);
+  const [exportandoCompradores, setExportandoCompradores] = useState(false);
+  function fmtPrecioNum(n) {
+    return "$" + Math.round(n || 0).toLocaleString("es-AR");
+  }
+  async function cargarPendientes() {
+    setCargandoPendientes(true);
+    try {
+      const snap = await window.__fb.db.collection("comprobantes").where("estado", "==", "pendiente").get();
+      const lista = [];
+      snap.forEach(doc => lista.push(doc.data()));
+      setPendientes(lista);
+    } catch (e) {
+      console.error("Error al cargar pendientes:", e);
+      alert("No se pudo cargar la lista. Probá de nuevo.");
+    }
+    setCargandoPendientes(false);
+  }
+  function abrirModalPendientes() {
+    setModalPendientesAbierto(true);
+    cargarPendientes();
+  }
+  async function confirmarPago(comprobante) {
+    setAccionandoCodigo(comprobante.codigo);
+    try {
+      const batch = window.__fb.db.batch();
+      batch.update(window.__fb.db.collection("comprobantes").doc(comprobante.codigo), {
+        estado: "confirmado"
+      });
+      (comprobante.numeros || []).forEach(num => {
+        batch.set(window.__fb.db.collection("sorteoNumeros").doc(num), {
+          estado: "pagado",
+          codigo: comprobante.codigo,
+          nombre: comprobante.nombre
+        }, {
+          merge: true
+        });
+      });
+      await batch.commit();
+      await cargarPendientes();
+    } catch (e) {
+      console.error("Error al confirmar el pago:", e);
+      alert("No se pudo confirmar. Probá de nuevo.");
+    }
+    setAccionandoCodigo(null);
+  }
+  async function rechazarPago(comprobante) {
+    if (!window.confirm("¿Rechazar este pago? Los números vuelven a quedar disponibles para otra persona.")) return;
+    setAccionandoCodigo(comprobante.codigo);
+    try {
+      const batch = window.__fb.db.batch();
+      batch.update(window.__fb.db.collection("comprobantes").doc(comprobante.codigo), {
+        estado: "rechazado"
+      });
+      (comprobante.numeros || []).forEach(num => batch.delete(window.__fb.db.collection("sorteoNumeros").doc(num)));
+      await batch.commit();
+      await cargarPendientes();
+    } catch (e) {
+      console.error("Error al rechazar el pago:", e);
+      alert("No se pudo rechazar. Probá de nuevo.");
+    }
+    setAccionandoCodigo(null);
+  }
+  async function exportarCompradoresConfirmados() {
+    setExportandoCompradores(true);
+    try {
+      const snap = await window.__fb.db.collection("comprobantes").where("estado", "==", "confirmado").get();
+      if (snap.empty) {
+        alert("Todavía no hay compradores confirmados.");
+      } else {
+        const filas = [["Codigo", "Nombre", "Numeros", "Pack", "Total"]];
+        snap.forEach(doc => {
+          const d = doc.data();
+          filas.push([d.codigo, d.nombre, (d.numeros || []).join(", "), d.pack || "", d.total || 0]);
+        });
+        const ws = window.XLSX.utils.aoa_to_sheet(filas);
+        ws["!cols"] = [{
+          wch: 12
+        }, {
+          wch: 24
+        }, {
+          wch: 24
+        }, {
+          wch: 10
+        }, {
+          wch: 12
+        }];
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, "Compradores");
+        const fecha = new Date().toISOString().slice(0, 10);
+        window.XLSX.writeFile(wb, "urqui-compradores-" + fecha + ".xlsx");
+      }
+    } catch (e) {
+      console.error("Error al exportar compradores:", e);
+      alert("No se pudo exportar. Probá de nuevo.");
+    }
+    setExportandoCompradores(false);
+  }
   function descargarContadorVentas() {
     try {
       const b64 = window.__CONTADOR_VENTAS_B64;
@@ -3671,7 +3773,42 @@ function TorneoPlanner() {
       textDecoration: "none",
       fontFamily: FONT
     }
-  }, "🎟 Talonario")), /*#__PURE__*/React.createElement("p", {
+  }, "🎟 Talonario"), /*#__PURE__*/React.createElement("button", {
+    onClick: abrirModalPendientes,
+    className: "cs-btn torneo-desktop-only",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      background: `${AMARILLO}18`,
+      border: `1px solid ${AMARILLO}`,
+      borderRadius: 8,
+      color: AMARILLO,
+      padding: "8px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "📋 Comprobantes pendientes"), /*#__PURE__*/React.createElement("button", {
+    onClick: exportarCompradoresConfirmados,
+    disabled: exportandoCompradores,
+    className: "cs-btn torneo-desktop-only",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      background: `${VERDE}18`,
+      border: `1px solid ${VERDE}`,
+      borderRadius: 8,
+      color: VERDE,
+      padding: "8px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "📊 ", exportandoCompradores ? "Exportando..." : "Exportar compradores")), /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
       fontSize: 12.5,
@@ -5189,7 +5326,137 @@ function TorneoPlanner() {
       text,
       checked: false
     }])
-  })))));
+  })))), modalPendientesAbierto && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setModalPendientesAbierto(false),
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      zIndex: 1000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 16,
+      padding: 24,
+      maxWidth: 620,
+      width: "100%",
+      maxHeight: "85vh",
+      overflowY: "auto",
+      fontFamily: FONT
+    }
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      fontSize: 18,
+      margin: "0 0 14px",
+      color: BLANCO
+    }
+  }, "📋 Comprobantes pendientes"), cargandoPendientes && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "Cargando..."), !cargandoPendientes && pendientes.length === 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "No hay comprobantes pendientes por ahora."), !cargandoPendientes && pendientes.map(comp => /*#__PURE__*/React.createElement("div", {
+    key: comp.codigo,
+    style: {
+      display: "flex",
+      gap: 12,
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: comp.comprobanteImg,
+    onClick: () => window.open(comp.comprobanteImg),
+    style: {
+      width: 70,
+      height: 70,
+      objectFit: "cover",
+      borderRadius: 8,
+      flexShrink: 0,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 12.5,
+      color: CLARO
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      color: BLANCO
+    }
+  }, comp.nombre || "—"), /*#__PURE__*/React.createElement("div", null, "Números: ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: BLANCO
+    }
+  }, (comp.numeros || []).join(", "))), /*#__PURE__*/React.createElement("div", null, "Total: ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: NARANJA
+    }
+  }, fmtPrecioNum(comp.total)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => confirmarPago(comp),
+    disabled: accionandoCodigo === comp.codigo,
+    style: {
+      background: VERDE,
+      border: "none",
+      borderRadius: 6,
+      padding: "6px 10px",
+      fontSize: 11.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      color: NEGRO
+    }
+  }, "✅ Confirmar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => rechazarPago(comp),
+    disabled: accionandoCodigo === comp.codigo,
+    style: {
+      background: "transparent",
+      border: `1px solid ${ROJO}`,
+      borderRadius: 6,
+      padding: "6px 10px",
+      fontSize: 11.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      color: ROJO
+    }
+  }, "❌ Rechazar")))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setModalPendientesAbierto(false),
+    style: {
+      background: "transparent",
+      border: `1px solid ${BORDE}`,
+      color: CLARO,
+      borderRadius: 8,
+      padding: "10px 18px",
+      fontSize: 13,
+      cursor: "pointer",
+      width: "100%",
+      marginTop: 10,
+      fontFamily: FONT
+    }
+  }, "Cerrar"))));
 }
 
 // ============================================================
