@@ -648,7 +648,10 @@
       reservaActual.nombre = nombre;
 
       const batch = db.batch();
-      reservaActual.numeros.forEach(num => batch.update(db.collection("sorteoNumeros").doc(num), { nombre }));
+      reservaActual.numeros.forEach(num => batch.update(db.collection("sorteoNumeros").doc(num), {
+        nombre,
+        expira: firebase.firestore.FieldValue.delete(), // deja de vencer: ahora espera revision del club, no un timer
+      }));
       batch.set(db.collection("comprobantes").doc(reservaActual.codigo), {
         codigo: reservaActual.codigo,
         nombre: reservaActual.nombre,
