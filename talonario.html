@@ -315,6 +315,16 @@
       const snap = await db.collection("urqui").doc(TORNEO_DOC_KEY).get();
       if (!snap.exists) throw new Error("No se encontraron datos del torneo.");
       const data = JSON.parse(snap.data().value);
+
+      if (data.ventasPausadas) {
+        document.getElementById("packs").innerHTML =
+          '<div style="background:var(--gris); border:1px solid var(--rojo); border-radius:12px; padding:24px; text-align:center; color:var(--rojo); font-size:14px; font-weight:700;">' +
+          '🚫 La venta de números está cerrada por ahora.<br><span style="font-weight:400; color:var(--muted); font-size:12.5px;">Volvé a intentarlo más tarde, o consultá con el club.</span></div>';
+        document.getElementById("btnContinuar").disabled = true;
+        document.getElementById("btnContinuar").style.display = "none";
+        return;
+      }
+
       PACKS = [
         { id: "pack1", num: data.pack1Num, precio: data.pack1Precio, nombre: "Pack 1" },
         { id: "pack2", num: data.pack2Num, precio: data.pack2Precio, nombre: "Pack 2" },
