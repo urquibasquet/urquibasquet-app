@@ -24,7 +24,7 @@
 //    reemplazando el objeto de ejemplo.
 
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAgaO4a2nUIhW2Oh6RXZpcM4-T11zxVnLs,
+  apiKey: "AIzaSyAgaO4a2nUIhW2Oh6RXZpcM4-T11zxVnLs",
   authDomain: "urquiapp.firebaseapp.com",
   projectId: "urquiapp",
   storageBucket: "urquiapp.firebasestorage.app",
