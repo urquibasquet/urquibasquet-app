@@ -3142,7 +3142,7 @@ function TorneoPlanner() {
         });
       });
       await batch.commit();
-      const mensajeParaPegar = "¡Confirmado! ✅ Tu pago quedó registrado.\n\n" + "El día del evento pasá por el buffet a retirar tu número físico del talonario con el código:\n\n" + comprobante.codigo;
+      const mensajeParaPegar = "¡Confirmado! ✅ Tu pago quedó registrado.\n\n" + "El día del evento pasá por el buffet, decí este código, y retirá tu número físico del talonario:\n\n" + comprobante.codigo + "\n\nEs obligatorio tenerlo en la mano para poder reclamar el premio si te toca ganar.";
       try {
         await navigator.clipboard.writeText(mensajeParaPegar);
       } catch (clipErr) {/* portapapeles no disponible, no pasa nada */}
