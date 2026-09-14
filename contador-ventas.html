@@ -42,8 +42,9 @@
   #resultadosBusqueda { margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
   .fila-resultado {
     display: flex; align-items: stretch; background: var(--gris); border: 1px solid var(--verde);
-    border-radius: 10px; overflow: hidden;
+    border-radius: 10px; overflow: hidden; transition: opacity 1.4s ease;
   }
+  .fila-resultado.desvaneciendo { opacity: 0; }
   .fila-resultado.sin-resultado { border-color: var(--rojo); }
   .fila-resultado.entregado { border-color: var(--muted); opacity: 0.6; }
   .fila-resultado .info-comprador { flex: 1; min-width: 0; padding: 10px 14px; font-size: 13px; }
@@ -158,7 +159,7 @@
   </div>
 
   <div class="buscador-comprador">
-    <input type="text" id="inputBuscarCodigo" placeholder="Código del comprador (ej: EL8CG, sin el URQ-)" style="text-transform:uppercase;" />
+    <input type="text" id="inputBuscarCodigo" placeholder="CÓDIGO DEL COMPRADOR" style="text-transform:uppercase;" />
     <button class="btn-buscar-codigo" id="btnBuscarComprador">🔍 Buscar</button>
   </div>
   <div id="resultadosBusqueda"></div>
@@ -382,19 +383,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   var PACK_PRECIO = { "Pack 1": PACK1_PRECIO, "Pack 2": PACK2_PRECIO, "Pack 3": PACK3_PRECIO };
 
   function actualizarResumenSorteo() {
-    var numerosVendidos = 0, recaudado = 0, packsVendidos = 0;
+    var numerosVendidos = 0, packsVendidos = 0;
     SORTEO_ITEMS.forEach(function (p) {
       var v = estado.sorteo[p] || 0;
       packsVendidos += v;
       numerosVendidos += v * PACK_NUM[p];
-      recaudado += v * PACK_PRECIO[p];
     });
     var restantes = TOTAL_NUMEROS_TALONARIO - numerosVendidos;
     document.getElementById("sorteoResumen").innerHTML =
       '<div class="fila"><span>Packs vendidos</span><strong>' + packsVendidos + '</strong></div>' +
       '<div class="fila"><span>Números vendidos</span><strong>' + numerosVendidos + ' / ' + TOTAL_NUMEROS_TALONARIO + '</strong></div>' +
-      '<div class="fila"><span>Números restantes</span><strong style="color:' + (restantes <= 0 ? "var(--rojo)" : "var(--blanco)") + '">' + restantes + '</strong></div>' +
-      '<div class="fila destacada"><span>Recaudado</span><strong>' + fmtPrecio(recaudado) + '</strong></div>';
+      '<div class="fila"><span>Números restantes</span><strong style="color:' + (restantes <= 0 ? "var(--rojo)" : "var(--blanco)") + '">' + restantes + '</strong></div>';
   }
   actualizarResumenSorteo();
 
@@ -487,13 +486,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (!query) return;
 
     var coincidencias = Object.keys(compradores).filter(function (codigo) {
-      return sufijo(codigo).indexOf(query) !== -1 || codigo.toUpperCase().indexOf(query) !== -1;
+      var c = compradores[codigo];
+      return sufijo(codigo).indexOf(query) !== -1 ||
+        codigo.toUpperCase().indexOf(query) !== -1 ||
+        (c.nombre || "").toUpperCase().indexOf(query) !== -1;
     }).slice(0, 8);
 
     if (coincidencias.length === 0) {
       var filaVacia = document.createElement("div");
       filaVacia.className = "fila-resultado sin-resultado";
-      filaVacia.innerHTML = '<div class="info-comprador">No encontramos ningún código que coincida.</div>';
+      filaVacia.innerHTML = '<div class="info-comprador">No encontramos ningún código ni nombre que coincida.</div>';
       cont.appendChild(filaVacia);
       return;
     }
@@ -511,9 +513,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         '</div>' +
         '<button class="btn-entregado' + (entregado ? ' ya-entregado' : '') + '">' + (entregado ? '✓ Entregado' : 'Entregado') + '</button>';
       fila.querySelector(".btn-entregado").onclick = function () {
-        compradores[codigo].entregado = !compradores[codigo].entregado;
+        var marcandoComoEntregado = !compradores[codigo].entregado;
+        compradores[codigo].entregado = marcandoComoEntregado;
         guardarCompradores();
-        buscarYRenderizar();
+        if (marcandoComoEntregado) {
+          // Se confirma visualmente y despues se desvanece solo — si hace falta un rollback,
+          // se vuelve a buscar el mismo codigo/nombre y aparece de nuevo para destildarlo.
+          fila.querySelector(".btn-entregado").className = "btn-entregado ya-entregado";
+          fila.querySelector(".btn-entregado").textContent = "✓ Entregado";
+          fila.classList.add("entregado");
+          setTimeout(function () { fila.classList.add("desvaneciendo"); }, 900);
+          setTimeout(function () { if (fila.parentNode) fila.parentNode.removeChild(fila); }, 2400);
+        } else {
+          buscarYRenderizar();
+        }
       };
       cont.appendChild(fila);
     });
