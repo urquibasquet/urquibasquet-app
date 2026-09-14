@@ -51,6 +51,8 @@
   .fila-resultado.desvaneciendo { opacity: 0; }
   .fila-resultado.sin-resultado { border-color: var(--rojo); }
   .fila-resultado.entregado { border-color: var(--muted); opacity: 0.6; }
+  .fila-resultado.pendiente { border-color: var(--amarillo); }
+  .btn-pendiente-aviso { background: var(--gris-claro); color: var(--amarillo); cursor: not-allowed; }
   .fila-resultado .info-comprador { flex: 1; min-width: 0; padding: 10px 14px; font-size: 13px; }
   .fila-resultado .nombre-comprador { font-size: 15px; font-weight: 800; color: var(--verde); margin-bottom: 2px; }
   .fila-resultado.entregado .nombre-comprador { color: var(--muted); text-decoration: line-through; }
@@ -508,31 +510,41 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     coincidencias.forEach(function (codigo) {
       var comprador = compradores[codigo];
       var entregado = !!comprador.entregado;
+      var esPendiente = comprador.estado === "pendiente";
       var fila = document.createElement("div");
-      fila.className = "fila-resultado" + (entregado ? " entregado" : "");
+      fila.className = "fila-resultado" + (entregado ? " entregado" : "") + (esPendiente ? " pendiente" : "");
+
+      var botonHtml = esPendiente
+        ? '<button class="btn-entregado btn-pendiente-aviso" disabled>⏳ Sin confirmar</button>'
+        : '<button class="btn-entregado' + (entregado ? ' ya-entregado' : '') + '">' + (entregado ? '✓ Entregado' : 'Entregado') + '</button>';
+
       fila.innerHTML =
         '<div class="info-comprador">' +
           '<div class="nombre-comprador">' + comprador.nombre + '</div>' +
-          '<div class="pack-comprador">' + (comprador.pack || "") + ' · ' + codigo + '</div>' +
+          '<div class="pack-comprador">' + (comprador.pack || "") + ' · ' + codigo +
+            (esPendiente ? ' · <span style="color:var(--amarillo)">pago sin confirmar todavía</span>' : '') + '</div>' +
           '<div class="numeros-comprador">' + comprador.numeros.join("  ·  ") + '</div>' +
         '</div>' +
-        '<button class="btn-entregado' + (entregado ? ' ya-entregado' : '') + '">' + (entregado ? '✓ Entregado' : 'Entregado') + '</button>';
-      fila.querySelector(".btn-entregado").onclick = function () {
-        var marcandoComoEntregado = !compradores[codigo].entregado;
-        compradores[codigo].entregado = marcandoComoEntregado;
-        guardarCompradores();
-        if (marcandoComoEntregado) {
-          // Se confirma visualmente y despues se desvanece solo — si hace falta un rollback,
-          // se vuelve a buscar el mismo codigo/nombre y aparece de nuevo para destildarlo.
-          fila.querySelector(".btn-entregado").className = "btn-entregado ya-entregado";
-          fila.querySelector(".btn-entregado").textContent = "✓ Entregado";
-          fila.classList.add("entregado");
-          setTimeout(function () { fila.classList.add("desvaneciendo"); }, 900);
-          setTimeout(function () { if (fila.parentNode) fila.parentNode.removeChild(fila); }, 2400);
-        } else {
-          buscarYRenderizar();
-        }
-      };
+        botonHtml;
+
+      if (!esPendiente) {
+        fila.querySelector(".btn-entregado").onclick = function () {
+          var marcandoComoEntregado = !compradores[codigo].entregado;
+          compradores[codigo].entregado = marcandoComoEntregado;
+          guardarCompradores();
+          if (marcandoComoEntregado) {
+            // Se confirma visualmente y despues se desvanece solo — si hace falta un rollback,
+            // se vuelve a buscar el mismo codigo/nombre y aparece de nuevo para destildarlo.
+            fila.querySelector(".btn-entregado").className = "btn-entregado ya-entregado";
+            fila.querySelector(".btn-entregado").textContent = "✓ Entregado";
+            fila.classList.add("entregado");
+            setTimeout(function () { fila.classList.add("desvaneciendo"); }, 900);
+            setTimeout(function () { if (fila.parentNode) fila.parentNode.removeChild(fila); }, 2400);
+          } else {
+            buscarYRenderizar();
+          }
+        };
+      }
       cont.appendChild(fila);
     });
   }
@@ -570,6 +582,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             numeros: numerosTxt ? String(numerosTxt).split(",").map(function (s) { return s.trim(); }) : [],
             pack: pack || "",
             entregado: entregadoPrevio || false,
+            estado: "confirmado",
           };
         });
         compradores = Object.assign({}, compradores, nuevos);
