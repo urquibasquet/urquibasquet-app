@@ -28,7 +28,7 @@
   .status-bar strong { color: var(--verde); }
 
   .buscador-comprador {
-    display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: flex-start;
+    display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: stretch;
   }
   .buscador-comprador input {
     flex: 1; min-width: 220px; background: var(--gris); border: 1px solid var(--naranja); border-radius: 8px;
@@ -38,17 +38,27 @@
     background: var(--naranja); border: none; color: var(--negro); font-weight: 700;
     border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer;
   }
-  .resultado-busqueda {
-    flex-basis: 100%; background: var(--gris); border: 1px solid var(--borde); border-radius: 10px;
-    padding: 10px 14px; font-size: 13px;
+
+  #resultadosBusqueda { margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .fila-resultado {
+    display: flex; align-items: stretch; background: var(--gris); border: 1px solid var(--verde);
+    border-radius: 10px; overflow: hidden;
   }
-  .resultado-busqueda.encontrado { border-color: var(--verde); }
-  .resultado-busqueda.no-encontrado { border-color: var(--rojo); color: var(--rojo); }
-  .resultado-busqueda .nombre-comprador { font-size: 15px; font-weight: 800; color: var(--verde); margin-bottom: 4px; }
-  .resultado-busqueda .numeros-comprador {
+  .fila-resultado.sin-resultado { border-color: var(--rojo); }
+  .fila-resultado.entregado { border-color: var(--muted); opacity: 0.6; }
+  .fila-resultado .info-comprador { flex: 1; min-width: 0; padding: 10px 14px; font-size: 13px; }
+  .fila-resultado .nombre-comprador { font-size: 15px; font-weight: 800; color: var(--verde); margin-bottom: 2px; }
+  .fila-resultado.entregado .nombre-comprador { color: var(--muted); text-decoration: line-through; }
+  .fila-resultado .pack-comprador { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .fila-resultado .numeros-comprador {
     font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 800; color: var(--blanco);
     letter-spacing: 0.03em;
   }
+  .btn-entregado {
+    flex-shrink: 0; width: 100px; border: none; border-left: 1px solid var(--borde);
+    background: var(--verde); color: var(--negro); font-weight: 800; font-size: 12.5px; cursor: pointer;
+  }
+  .btn-entregado.ya-entregado { background: var(--gris-claro); color: var(--muted); }
 
   /* 2 filas, altura proporcional a la cantidad de items de cada una (fila 1: hasta 8, fila 2: hasta 6) */
   .rows { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -148,10 +158,10 @@
   </div>
 
   <div class="buscador-comprador">
-    <input type="text" id="inputBuscarCodigo" placeholder="Código del comprador (ej: URQ-4821)" style="text-transform:uppercase;" />
+    <input type="text" id="inputBuscarCodigo" placeholder="Código del comprador (ej: EL8CG, sin el URQ-)" style="text-transform:uppercase;" />
     <button class="btn-buscar-codigo" id="btnBuscarComprador">🔍 Buscar</button>
-    <div id="resultadoBusqueda" class="resultado-busqueda" style="display:none;"></div>
   </div>
+  <div id="resultadosBusqueda"></div>
 
   <div class="rows">
     <div class="row1">
@@ -461,25 +471,58 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (raw) compradores = Object.assign({}, compradores, JSON.parse(raw));
   } catch (e) { console.error("No se pudo leer la lista de compradores:", e); }
 
-  document.getElementById("btnBuscarComprador").onclick = () => {
-    var codigo = document.getElementById("inputBuscarCodigo").value.trim().toUpperCase();
-    var resEl = document.getElementById("resultadoBusqueda");
-    if (!codigo) { resEl.style.display = "none"; return; }
-    var comprador = compradores[codigo];
-    if (!comprador) {
-      resEl.className = "resultado-busqueda no-encontrado";
-      resEl.innerHTML = "No encontramos ese código. Revisá que esté bien escrito, o que ya se haya importado la lista de compradores.";
-    } else {
-      resEl.className = "resultado-busqueda encontrado";
-      resEl.innerHTML =
-        '<div class="nombre-comprador">' + comprador.nombre + '</div>' +
-        '<div style="color:var(--muted); font-size:11px; margin-bottom:4px;">' + (comprador.pack || "") + '</div>' +
-        '<div class="numeros-comprador">' + comprador.numeros.join("  ·  ") + '</div>';
+  function guardarCompradores() {
+    try { window.localStorage.setItem(COMPRADORES_KEY, JSON.stringify(compradores)); }
+    catch (e) { console.error("No se pudo guardar el estado de entrega:", e); }
+  }
+
+  function sufijo(codigo) {
+    return codigo.replace(/^URQ-?/, "").toUpperCase();
+  }
+
+  function buscarYRenderizar() {
+    var query = document.getElementById("inputBuscarCodigo").value.trim().toUpperCase();
+    var cont = document.getElementById("resultadosBusqueda");
+    cont.innerHTML = "";
+    if (!query) return;
+
+    var coincidencias = Object.keys(compradores).filter(function (codigo) {
+      return sufijo(codigo).indexOf(query) !== -1 || codigo.toUpperCase().indexOf(query) !== -1;
+    }).slice(0, 8);
+
+    if (coincidencias.length === 0) {
+      var filaVacia = document.createElement("div");
+      filaVacia.className = "fila-resultado sin-resultado";
+      filaVacia.innerHTML = '<div class="info-comprador">No encontramos ningún código que coincida.</div>';
+      cont.appendChild(filaVacia);
+      return;
     }
-    resEl.style.display = "block";
-  };
+
+    coincidencias.forEach(function (codigo) {
+      var comprador = compradores[codigo];
+      var entregado = !!comprador.entregado;
+      var fila = document.createElement("div");
+      fila.className = "fila-resultado" + (entregado ? " entregado" : "");
+      fila.innerHTML =
+        '<div class="info-comprador">' +
+          '<div class="nombre-comprador">' + comprador.nombre + '</div>' +
+          '<div class="pack-comprador">' + (comprador.pack || "") + ' · ' + codigo + '</div>' +
+          '<div class="numeros-comprador">' + comprador.numeros.join("  ·  ") + '</div>' +
+        '</div>' +
+        '<button class="btn-entregado' + (entregado ? ' ya-entregado' : '') + '">' + (entregado ? '✓ Entregado' : 'Entregado') + '</button>';
+      fila.querySelector(".btn-entregado").onclick = function () {
+        compradores[codigo].entregado = !compradores[codigo].entregado;
+        guardarCompradores();
+        buscarYRenderizar();
+      };
+      cont.appendChild(fila);
+    });
+  }
+
+  document.getElementById("inputBuscarCodigo").addEventListener("input", buscarYRenderizar);
+  document.getElementById("btnBuscarComprador").onclick = buscarYRenderizar;
   document.getElementById("inputBuscarCodigo").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") document.getElementById("btnBuscarComprador").click();
+    if (e.key === "Enter") buscarYRenderizar();
   });
 
   document.getElementById("btnImportarCompradores").onclick = () => document.getElementById("inputImportarCompradores").click();
@@ -497,10 +540,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         filas.slice(1).forEach(function (fila) {
           var codigo = fila[0], nombre = fila[1], numerosTxt = fila[2], pack = fila[3];
           if (!codigo) return;
-          nuevos[String(codigo).toUpperCase()] = {
+          var codigoUpper = String(codigo).toUpperCase();
+          var entregadoPrevio = compradores[codigoUpper] ? compradores[codigoUpper].entregado : false;
+          nuevos[codigoUpper] = {
             nombre: nombre || "",
             numeros: numerosTxt ? String(numerosTxt).split(",").map(function (s) { return s.trim(); }) : [],
             pack: pack || "",
+            entregado: entregadoPrevio || false,
           };
         });
         compradores = Object.assign({}, compradores, nuevos);
