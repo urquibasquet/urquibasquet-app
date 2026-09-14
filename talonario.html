@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --naranja: #FF8C42; --negro: #14161B; --fondo: #0F1013; --gris: #1D2027; --gris-claro: #22252C;
@@ -38,19 +38,11 @@
     border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 10px;
   }
 
-  .pasos { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px 0 24px; position: relative; }
+  .volver-fila { min-height: 30px; margin: 18px 0 14px; position: relative; }
   .btn-volver-inline {
-    position: absolute; left: 0; background: var(--gris); border: 1px solid var(--borde); color: var(--claro);
+    background: var(--gris); border: 1px solid var(--borde); color: var(--claro);
     border-radius: 8px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .paso-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 700; }
-  .paso-dot .num {
-    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--borde); font-size: 11px; background: var(--gris);
-  }
-  .paso-dot.activo { color: var(--blanco); }
-  .paso-dot.activo .num { background: var(--naranja); border-color: var(--naranja); color: var(--negro); }
-  .paso-linea { width: 30px; height: 1px; background: var(--borde); }
 
   .pantalla { display: none; }
   .pantalla.activa { display: block; }
@@ -61,7 +53,7 @@
   }
   .banner-limite-txt { font-size: 13px; font-weight: 700; color: var(--naranja); letter-spacing: 0.01em; margin-bottom: 6px; }
   .banner-cuenta-regresiva {
-    font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 800; color: var(--blanco); letter-spacing: 0.02em;
+    font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 800; color: var(--blanco); letter-spacing: 0.02em;
   }
   .banner-cuenta-regresiva .unidad { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 2px; }
 
@@ -80,8 +72,10 @@
     background: var(--gris);
   }
   .premio-slot .premio-contenido img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .premio-slot:hover .premio-contenido {
-    transform: scale(2.6); z-index: 20; box-shadow: 0 8px 30px rgba(0,0,0,0.6); border: 2px solid var(--naranja);
+  @media (min-width: 561px) {
+    .premio-slot:hover .premio-contenido {
+      transform: scale(1.6); z-index: 20; box-shadow: 0 8px 30px rgba(0,0,0,0.6); border: 2px solid var(--naranja);
+    }
   }
   .packs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 22px 0; }
   .pack-btn {
@@ -109,7 +103,7 @@
   .estado-seleccion .numeros-elegidos { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip-elegido {
     background: rgba(91,157,255,0.15); border: 1px solid var(--azul); color: var(--azul);
-    border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 700; font-family: 'Montserrat', sans-serif;
   }
 
   .leyenda { display: flex; gap: 16px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
@@ -123,7 +117,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
   .key {
     position: relative; aspect-ratio: 1; border-radius: 7px; border: none;
-    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     color: var(--negro); background: var(--verde);
     box-shadow: 0 3px 0 0 #1E8F52, 0 4px 4px rgba(0,0,0,0.3);
@@ -157,7 +151,7 @@
   .modal p { font-size: 13px; color: var(--claro); line-height: 1.5; margin: 0 0 16px; }
   .modal .codigo {
     background: var(--negro); border: 1px dashed var(--naranja); border-radius: 10px; padding: 14px;
-    font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 800; color: var(--naranja);
+    font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800; color: var(--naranja);
     letter-spacing: 0.05em; margin-bottom: 14px;
   }
   .modal input {
@@ -180,7 +174,7 @@
   .bloque-transferencia .titulo { font-size: 12px; font-weight: 800; color: var(--claro); margin-bottom: 6px; }
   .bloque-transferencia .fila { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
   .bloque-transferencia .fila span { color: var(--muted); }
-  .bloque-transferencia .fila strong { color: var(--blanco); font-family: 'JetBrains Mono', monospace; }
+  .bloque-transferencia .fila strong { color: var(--blanco); font-family: 'Montserrat', sans-serif; }
 
   #modalReserva.bloqueado input,
   #modalReserva.bloqueado #btnElegirComprobante {
@@ -211,11 +205,8 @@
     <button class="link-consultar" id="btnAbrirConsulta">¿Ya reservaste? Consultá tu comprobante →</button>
   </div>
 
-  <div class="pasos" id="pasosRow">
+  <div class="volver-fila" id="pasosRow">
     <button class="btn-volver-inline" id="btnVolver" style="display:none;" title="Volver a elegir pack">←</button>
-    <div class="paso-dot activo" id="pasoDot1"><span class="num">1</span> Elegir pack</div>
-    <div class="paso-linea"></div>
-    <div class="paso-dot" id="pasoDot2"><span class="num">2</span> Elegir números</div>
   </div>
 
   <!-- PANTALLA 1: elegir pack -->
@@ -284,8 +275,11 @@
 
     <div id="errorGuardarDatos" class="aviso-error" style="display:none;"></div>
     <button class="btn-confirmar" id="btnConfirmarTodo">✅ Confirmar y avisar por WhatsApp</button>
-    <div id="estadoConfirmado" style="display:none; text-align:center; color:var(--verde); font-size:13px; font-weight:700; margin-top:10px;">
-      ✅ Avisamos al club por WhatsApp. Cuando confirmen tu pago, te van a pasar ahí mismo tu código — guardalo, lo pedimos el día del evento en el buffet.
+    <div id="estadoConfirmado" style="display:none; text-align:left; color:var(--verde); font-size:12.5px; font-weight:400; line-height:1.5; margin-top:10px;">
+      <p style="margin:0 0 8px; font-weight:700;">📱 Te redirigimos a WhatsApp.</p>
+      <p style="margin:0 0 8px;">Cuando te confirmen el pago te van a dar un código — ese código lo tenés que usar para retirar el cupón físico en el buffet.</p>
+      <p style="margin:0 0 8px;">Podés fijarte si ya está confirmado tocando <strong>"¿Ya reservaste? Consultá tu comprobante"</strong> arriba de esta página.</p>
+      <p style="margin:0; color:var(--muted);">La aprobación tarda unos minutos...</p>
     </div>
 
     <button class="btn-cerrar" id="btnCerrarModal">Cerrar</button>
@@ -443,8 +437,6 @@
   function mostrarPantalla(n) {
     document.getElementById("pantalla1").classList.toggle("activa", n === 1);
     document.getElementById("pantalla2").classList.toggle("activa", n === 2);
-    document.getElementById("pasoDot1").classList.toggle("activo", n === 1);
-    document.getElementById("pasoDot2").classList.toggle("activo", n === 2);
     document.getElementById("btnVolver").style.display = n === 2 ? "flex" : "none";
     window.scrollTo(0, 0);
   }
@@ -881,7 +873,7 @@
     ctx.font = "12px 'Montserrat', sans-serif";
     ctx.fillText("NÚMEROS", W / 2, 235);
     ctx.fillStyle = "#5B9DFF";
-    ctx.font = "bold 26px 'JetBrains Mono', monospace";
+    ctx.font = "bold 26px 'Montserrat', sans-serif";
     ctx.fillText((data.numeros || []).join("  ·  "), W / 2, 268);
 
     ctx.fillStyle = "#8A8D95";
@@ -892,7 +884,7 @@
     ctx.font = "bold 18px 'Montserrat', sans-serif";
     ctx.fillText(fmtPrecio(data.total || 0), W / 2 - 130, 345);
     ctx.fillStyle = "#F2F1ED";
-    ctx.font = "bold 18px 'JetBrains Mono', monospace";
+    ctx.font = "bold 18px 'Montserrat', sans-serif";
     ctx.fillText(data.codigo || "—", W / 2 + 130, 345);
 
     ctx.fillStyle = "#FFD166";
