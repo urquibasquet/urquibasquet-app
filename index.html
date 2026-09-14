@@ -2790,7 +2790,6 @@ function TorneoPlanner() {
   const [pack3Precio, setPack3Precio] = useState(DEFAULTS.pack3Precio);
   const [pack3Vendidos, setPack3Vendidos] = useState(DEFAULTS.pack3Vendidos);
   const [totalNumeros, setTotalNumeros] = useState(DEFAULTS.totalNumeros);
-  const [ventasPausadas, setVentasPausadas] = useState(false);
   const [cantPremios, setCantPremios] = useState(DEFAULTS.cantPremios);
   const [equipos, setEquipos] = useState(DEFAULTS.equipos);
   const [precioPorEquipo, setPrecioPorEquipo] = useState(DEFAULTS.precioPorEquipo);
@@ -2871,7 +2870,6 @@ function TorneoPlanner() {
             setPack3Vendidos(d.pack3Vendidos);
           }
           if (d.totalNumeros !== undefined) setTotalNumeros(d.totalNumeros);
-          if (d.ventasPausadas !== undefined) setVentasPausadas(d.ventasPausadas);
           if (d.cantPremios !== undefined) setCantPremios(d.cantPremios);
           if (d.equipos !== undefined) {
             setEquipos(d.equipos);
@@ -2955,7 +2953,6 @@ function TorneoPlanner() {
     pack3Precio,
     pack3Vendidos,
     totalNumeros,
-    ventasPausadas,
     cantPremios,
     equipos,
     precioPorEquipo,
@@ -3001,7 +2998,7 @@ function TorneoPlanner() {
     gaseosaBeb500Cant,
     gaseosaBeb1LPrecio,
     gaseosaBeb1LCant
-  }), [pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, totalNumeros, ventasPausadas, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
+  }), [pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, totalNumeros, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
   useEffect(() => {
     if (!loaded) return;
     setSaveStatus("saving");
@@ -3779,23 +3776,6 @@ function TorneoPlanner() {
       fontFamily: FONT
     }
   }, "🎟 Talonario"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setVentasPausadas(!ventasPausadas),
-    className: "cs-btn torneo-desktop-only",
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 6,
-      background: ventasPausadas ? `${ROJO}18` : `${VERDE}18`,
-      border: `1px solid ${ventasPausadas ? ROJO : VERDE}`,
-      borderRadius: 8,
-      color: ventasPausadas ? ROJO : VERDE,
-      padding: "8px 14px",
-      fontSize: 12.5,
-      fontWeight: 700,
-      cursor: "pointer",
-      fontFamily: FONT
-    }
-  }, ventasPausadas ? "🚫 Venta pausada" : "🟢 Venta abierta"), /*#__PURE__*/React.createElement("button", {
     onClick: abrirModalHistorial,
     className: "cs-btn torneo-desktop-only",
     style: {

@@ -55,6 +55,11 @@
   .pantalla { display: none; }
   .pantalla.activa { display: block; }
 
+  .banner-limite {
+    background: rgba(255,140,66,0.12); border: 2px solid var(--naranja); border-radius: 12px;
+    padding: 14px 18px; text-align: center; font-size: 15px; font-weight: 800; color: var(--naranja);
+    letter-spacing: 0.02em; margin-bottom: 4px;
+  }
   .packs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 22px 0; }
   .pack-btn {
     background: var(--gris); border: 2px solid var(--borde); border-radius: 12px; padding: 14px 20px;
@@ -192,6 +197,8 @@
 
   <!-- PANTALLA 1: elegir pack -->
   <div class="pantalla activa" id="pantalla1">
+    <div class="banner-limite" id="bannerLimite">TENÉS TIEMPO DE COMPRAR HASTA EL 31 DE OCTUBRE</div>
+
     <div class="packs" id="packs"></div>
 
     <button class="btn-continuar" id="btnContinuar" disabled>Continuar →</button>
@@ -310,20 +317,18 @@
   }
 
   // ── Leer los packs y la cantidad de números actuales desde la misma base que usa la app principal ──
+  const FECHA_LIMITE_VENTA = new Date("2026-10-31T23:59:59");
+
   async function cargarPacksDesdeApp() {
     try {
+      if (new Date() > FECHA_LIMITE_VENTA) {
+        mostrarVentaCerrada();
+        return;
+      }
+
       const snap = await db.collection("urqui").doc(TORNEO_DOC_KEY).get();
       if (!snap.exists) throw new Error("No se encontraron datos del torneo.");
       const data = JSON.parse(snap.data().value);
-
-      if (data.ventasPausadas) {
-        document.getElementById("packs").innerHTML =
-          '<div style="background:var(--gris); border:1px solid var(--rojo); border-radius:12px; padding:24px; text-align:center; color:var(--rojo); font-size:14px; font-weight:700;">' +
-          '🚫 La venta de números está cerrada por ahora.<br><span style="font-weight:400; color:var(--muted); font-size:12.5px;">Volvé a intentarlo más tarde, o consultá con el club.</span></div>';
-        document.getElementById("btnContinuar").disabled = true;
-        document.getElementById("btnContinuar").style.display = "none";
-        return;
-      }
 
       PACKS = [
         { id: "pack1", num: data.pack1Num, precio: data.pack1Precio, nombre: "Pack 1" },
@@ -338,6 +343,19 @@
       document.getElementById("packs").innerHTML =
         '<p style="color:var(--rojo); font-size:13px;">No se pudieron cargar los packs. Recargá la página.</p>';
     }
+  }
+
+  function mostrarVentaCerrada() {
+    document.getElementById("bannerLimite").style.display = "none";
+    document.getElementById("packs").innerHTML =
+      '<div style="background:var(--gris); border:1px solid var(--rojo); border-radius:12px; padding:26px 22px; text-align:center;">' +
+        '<div style="color:var(--rojo); font-size:16px; font-weight:800; margin-bottom:14px;">🚫 LA VENTA DE NÚMEROS YA CERRÓ</div>' +
+        '<div style="color:var(--claro); font-size:13px; line-height:1.6; text-align:left; max-width:400px; margin:0 auto;">' +
+          '<p style="margin:0 0 10px;">📍 Si ya compraste un número, recordá que tenés que <strong style="color:var(--blanco)">retirarlo físicamente en el buffet el día del evento</strong> para poder canjear el premio si te toca ganar.</p>' +
+          '<p style="margin:0;">🔍 ¿No te acordás qué números compraste? Buscalos con tu código, tocando <strong style="color:var(--naranja)">"¿Ya reservaste? Consultá tu comprobante"</strong> arriba de esta página.</p>' +
+        '</div>' +
+      '</div>';
+    document.getElementById("btnContinuar").style.display = "none";
   }
 
   function fmtPrecio(n) { return "$" + Math.round(n).toLocaleString("es-AR"); }
