@@ -3056,6 +3056,9 @@ function TorneoPlanner() {
   const [exportandoCompradores, setExportandoCompradores] = useState(false);
   const [descargandoContador, setDescargandoContador] = useState(false);
   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
+  const [modalPremiosAbierto, setModalPremiosAbierto] = useState(false);
+  const [premiosImagenes, setPremiosImagenes] = useState(new Array(12).fill(null));
+  const [cargandoPremios, setCargandoPremios] = useState(false);
   const [historialPagos, setHistorialPagos] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [busquedaHistorial, setBusquedaHistorial] = useState("");
@@ -3085,6 +3088,37 @@ function TorneoPlanner() {
   });
   function fmtPrecioNum(n) {
     return "$" + Math.round(n || 0).toLocaleString("es-AR");
+  }
+  async function abrirModalPremios() {
+    setModalPremiosAbierto(true);
+    setCargandoPremios(true);
+    try {
+      const snap = await window.__fb.db.collection("config").doc("premios").get();
+      if (snap.exists && Array.isArray(snap.data().imagenes)) {
+        const arr = snap.data().imagenes.slice(0, 12);
+        while (arr.length < 12) arr.push(null);
+        setPremiosImagenes(arr);
+      }
+    } catch (e) {
+      console.error("Error al cargar las fotos de premios:", e);
+    }
+    setCargandoPremios(false);
+  }
+  async function subirFotoPremio(indice, file) {
+    try {
+      const dataUrl = await compressImage(file, 700, 0.75);
+      const nuevas = [...premiosImagenes];
+      nuevas[indice] = dataUrl;
+      setPremiosImagenes(nuevas);
+      await window.__fb.db.collection("config").doc("premios").set({
+        imagenes: nuevas
+      }, {
+        merge: true
+      });
+    } catch (e) {
+      console.error("Error al subir la foto del premio:", e);
+      alert("No se pudo subir la foto.");
+    }
   }
   async function confirmarPago(comprobante) {
     setAccionandoCodigo(comprobante.codigo);
@@ -3756,7 +3790,24 @@ function TorneoPlanner() {
       fontFamily: FONT_MONO,
       textAlign: "center"
     }
-  })), /*#__PURE__*/React.createElement("a", {
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: abrirModalPremios,
+    className: "cs-btn torneo-desktop-only",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      background: `${NARANJA}18`,
+      border: `1px solid ${NARANJA}`,
+      borderRadius: 8,
+      color: NARANJA,
+      padding: "8px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "🏆 Premios"), /*#__PURE__*/React.createElement("a", {
     href: "talonario.html",
     target: "_blank",
     rel: "noopener",
@@ -5328,7 +5379,106 @@ function TorneoPlanner() {
       text,
       checked: false
     }])
-  })))), modalHistorialAbierto && /*#__PURE__*/React.createElement("div", {
+  })))), modalPremiosAbierto && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setModalPremiosAbierto(false),
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      zIndex: 1000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: GRIS,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 16,
+      padding: 24,
+      maxWidth: 560,
+      width: "100%",
+      maxHeight: "85vh",
+      overflowY: "auto",
+      fontFamily: FONT
+    }
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      fontSize: 18,
+      margin: "0 0 6px",
+      color: BLANCO
+    }
+  }, "🏆 Fotos de los premios"), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: MUTED,
+      margin: "0 0 16px"
+    }
+  }, "Lo que subas acá aparece en el talonario para que lo vea cualquiera — nadie más que vos puede editarlo desde ahí."), cargandoPremios ? /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: MUTED,
+      fontSize: 13
+    }
+  }, "Cargando...") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(4, 1fr)",
+      gap: 8
+    }
+  }, premiosImagenes.map((img, i) => /*#__PURE__*/React.createElement("label", {
+    key: i,
+    style: {
+      position: "relative",
+      aspectRatio: "1",
+      borderRadius: 10,
+      overflow: "hidden",
+      background: GRIS_CLARO,
+      border: `1px dashed ${BORDE}`,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, img ? /*#__PURE__*/React.createElement("img", {
+    src: img,
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    }
+  }) : /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: MUTED,
+      fontSize: 18
+    }
+  }, "🏆"), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      const f = e.target.files && e.target.files[0];
+      if (f) subirFotoPremio(i, f);
+      e.target.value = "";
+    }
+  })))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setModalPremiosAbierto(false),
+    style: {
+      background: "transparent",
+      border: `1px solid ${BORDE}`,
+      color: CLARO,
+      borderRadius: 8,
+      padding: "10px 18px",
+      fontSize: 13,
+      cursor: "pointer",
+      width: "100%",
+      marginTop: 16,
+      fontFamily: FONT
+    }
+  }, "Cerrar"))), modalHistorialAbierto && /*#__PURE__*/React.createElement("div", {
     onClick: () => setModalHistorialAbierto(false),
     style: {
       position: "fixed",
