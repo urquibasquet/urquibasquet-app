@@ -50,15 +50,12 @@
   .banner-limite {
     text-align: center; margin-bottom: 16px;
   }
-  .banner-limite-txt { font-size: 13.5px; font-weight: 700; color: var(--blanco); letter-spacing: 0.01em; margin-bottom: 6px; }
+  .banner-limite-txt { font-size: 13.5px; font-weight: 700; color: var(--blanco); letter-spacing: 0.01em; line-height: 1.6; }
   .banner-cuenta-regresiva {
-    font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 800; color: var(--naranja); letter-spacing: 0.02em;
+    font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 800; color: var(--naranja); letter-spacing: 0.02em;
   }
-  .banner-cuenta-regresiva .unidad { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 2px; }
+  .banner-cuenta-regresiva .unidad { font-size: 10.5px; font-weight: 600; color: var(--muted); margin: 0 1px; }
 
-  .titulo-premios {
-    text-align: center; font-size: 13px; font-weight: 700; color: var(--claro); margin-bottom: 12px;
-  }
   .matriz-premios {
     display: grid; grid-template-columns: repeat(auto-fit, 110px); gap: 10px;
     justify-content: center; margin: 28px 0 32px;
@@ -98,6 +95,9 @@
     border-radius: 10px; padding: 14px 34px; font-size: 14.5px; font-weight: 800; cursor: pointer;
   }
   .btn-continuar:disabled { background: var(--borde); color: var(--muted); cursor: not-allowed; }
+  .leyenda-continuar {
+    text-align: center; font-size: 11px; color: var(--muted); max-width: 380px; margin: 10px auto 0; line-height: 1.5;
+  }
 
   .estado-seleccion {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
@@ -217,16 +217,15 @@
   <!-- PANTALLA 1: elegir pack -->
   <div class="pantalla activa" id="pantalla1">
     <div class="banner-limite" id="bannerLimite">
-      <div class="banner-limite-txt">TENÉS ESTE TIEMPO PARA COMPRAR TU NÚMERO ANTES DEL TORNEO:</div>
-      <div class="banner-cuenta-regresiva" id="cuentaRegresiva">—</div>
+      <div class="banner-limite-txt">TENÉS <span class="banner-cuenta-regresiva" id="cuentaRegresiva">—</span> PARA COMPRAR TU NÚMERO ANTES DEL TORNEO:</div>
     </div>
 
-    <div class="titulo-premios" id="tituloPremios" style="display:none;">🏆 Podés ganarte los siguientes premios en el sorteo, el día del torneo 7/11:</div>
     <div class="matriz-premios" id="matrizPremios"></div>
 
     <div class="packs" id="packs"></div>
 
     <button class="btn-continuar" id="btnContinuar" disabled>Continuar →</button>
+    <p class="leyenda-continuar">Al continuar, aceptás que para ganar algún premio es obligatorio retirar el número físico el día del evento.</p>
   </div>
 
   <!-- PANTALLA 2: elegir numeros -->
@@ -929,12 +928,10 @@
 
   function renderMatrizPremios() {
     const cont = document.getElementById("matrizPremios");
-    const titulo = document.getElementById("tituloPremios");
     cont.innerHTML = "";
     const conFoto = premiosImagenes.filter(img => !!img);
-    if (conFoto.length === 0) { cont.style.display = "none"; titulo.style.display = "none"; return; }
+    if (conFoto.length === 0) { cont.style.display = "none"; return; }
     cont.style.display = "grid";
-    titulo.style.display = "block";
     conFoto.forEach(img => {
       const slot = document.createElement("div");
       slot.className = "premio-slot";
