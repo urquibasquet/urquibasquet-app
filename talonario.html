@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Elegí tu número — Sorteo El Urqui Básquet</title>
+<title>Talonario online — Sorteo El Urqui Básquet</title>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +24,7 @@
   .header p { color: var(--muted); font-size: 13.5px; max-width: 480px; margin: 0 auto; line-height: 1.5; }
   .link-consultar {
     background: none; border: none; color: var(--azul); font-size: 12.5px; font-weight: 700;
-    cursor: pointer; margin-top: 8px; text-decoration: underline;
+    cursor: pointer; margin-top: 8px; margin-bottom: 20px; text-decoration: underline; display: block;
   }
 
   .estado-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 14px; }
@@ -48,17 +48,19 @@
   .pantalla.activa { display: block; }
 
   .banner-limite {
-    background: rgba(255,140,66,0.12); border: 2px solid var(--naranja); border-radius: 12px;
-    padding: 14px 18px; text-align: center; margin-bottom: 16px;
+    text-align: center; margin-bottom: 16px;
   }
-  .banner-limite-txt { font-size: 13px; font-weight: 700; color: var(--naranja); letter-spacing: 0.01em; margin-bottom: 6px; }
+  .banner-limite-txt { font-size: 13.5px; font-weight: 700; color: var(--blanco); letter-spacing: 0.01em; margin-bottom: 6px; }
   .banner-cuenta-regresiva {
-    font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 800; color: var(--blanco); letter-spacing: 0.02em;
+    font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 800; color: var(--naranja); letter-spacing: 0.02em;
   }
   .banner-cuenta-regresiva .unidad { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 2px; }
 
+  .titulo-premios {
+    text-align: center; font-size: 13px; font-weight: 700; color: var(--claro); margin-bottom: 12px;
+  }
   .matriz-premios {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 22px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 28px 0 32px;
   }
   @media (max-width: 560px) { .matriz-premios { grid-template-columns: repeat(3, 1fr); } }
   .premio-slot {
@@ -76,6 +78,9 @@
     .premio-slot:hover .premio-contenido {
       transform: scale(1.6); z-index: 20; box-shadow: 0 8px 30px rgba(0,0,0,0.6); border: 2px solid var(--naranja);
     }
+    /* Las columnas de los bordes agrandan hacia adentro, para que nunca se corten con el borde de la ventana */
+    .matriz-premios .premio-slot:nth-child(6n+1) .premio-contenido { transform-origin: left center; }
+    .matriz-premios .premio-slot:nth-child(6n) .premio-contenido { transform-origin: right center; }
   }
   .packs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 22px 0; }
   .pack-btn {
@@ -127,8 +132,8 @@
   .key:active { transform: translateY(2px); box-shadow: 0 1px 0 0 #1E8F52, 0 2px 2px rgba(0,0,0,0.3); }
   .key.ocupado { background: var(--rojo); color: #3A0E0E; cursor: not-allowed; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
   .key.ocupado:active { transform: none; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
-  .key.reservado { background: var(--naranja); color: #3A2100; cursor: not-allowed; box-shadow: 0 3px 0 0 #B8641E, 0 4px 4px rgba(0,0,0,0.3); }
-  .key.reservado:active { transform: none; box-shadow: 0 3px 0 0 #B8641E, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado { background: #fcfc03; color: #3A3A00; cursor: not-allowed; box-shadow: 0 3px 0 0 #c4c400, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado:active { transform: none; box-shadow: 0 3px 0 0 #c4c400, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido { background: var(--azul); color: var(--negro); box-shadow: 0 3px 0 0 #3E75D6, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido:active { box-shadow: 0 1px 0 0 #3E75D6, 0 2px 2px rgba(0,0,0,0.3); }
   .key:disabled { opacity: 0.55; }
@@ -164,9 +169,9 @@
 
   .bloque-advertencia {
     background: rgba(255,209,102,0.1); border: 1px solid var(--amarillo); border-radius: 8px;
-    padding: 10px 12px; font-size: 12px; color: var(--amarillo); text-align: left; margin-bottom: 14px;
+    padding: 10px 12px; font-size: 13px; color: var(--amarillo); text-align: left; margin-bottom: 14px;
   }
-  .bloque-advertencia .titulo { font-weight: 800; margin-bottom: 3px; }
+  .bloque-advertencia .titulo { font-weight: 800; font-size: 14px; margin-bottom: 3px; }
   .bloque-transferencia {
     background: var(--gris-claro); border: 1px solid var(--borde); border-radius: 8px;
     padding: 10px 12px; text-align: left; margin-bottom: 12px;
@@ -201,7 +206,7 @@
 <div class="wrap">
   <div class="header">
     <div class="kicker">El Urqui Básquet · 7ma Edición</div>
-    <h1>🎟 Elegí tu número</h1>
+    <h1>🎟 Talonario online</h1>
     <button class="link-consultar" id="btnAbrirConsulta">¿Ya reservaste? Consultá tu comprobante →</button>
   </div>
 
@@ -212,10 +217,11 @@
   <!-- PANTALLA 1: elegir pack -->
   <div class="pantalla activa" id="pantalla1">
     <div class="banner-limite" id="bannerLimite">
-      <div class="banner-limite-txt">🎟 Reservá tu número con tiempo — Sorteo disponible hasta:</div>
+      <div class="banner-limite-txt">TENÉS ESTE TIEMPO PARA COMPRAR TU NÚMERO ANTES DEL TORNEO:</div>
       <div class="banner-cuenta-regresiva" id="cuentaRegresiva">—</div>
     </div>
 
+    <div class="titulo-premios" id="tituloPremios" style="display:none;">🏆 Podés ganarte los siguientes premios en el sorteo, el día del torneo 7/11:</div>
     <div class="matriz-premios" id="matrizPremios"></div>
 
     <div class="packs" id="packs"></div>
@@ -233,7 +239,7 @@
     <div class="leyenda">
       <div class="item"><span class="swatch" style="background:var(--verde)"></span> Disponible</div>
       <div class="item"><span class="swatch" style="background:var(--azul)"></span> Elegido por vos</div>
-      <div class="item"><span class="swatch" style="background:var(--naranja)"></span> Reservado (puede liberarse)</div>
+      <div class="item"><span class="swatch" style="background:#fcfc03"></span> Reservado (puede liberarse)</div>
       <div class="item"><span class="swatch" style="background:var(--rojo)"></span> Vendido</div>
     </div>
 
@@ -257,7 +263,7 @@
     <div class="codigo" id="numerosReservados" style="font-size:20px; margin-bottom:14px;">—</div>
 
     <div class="bloque-advertencia">
-      <div class="titulo">⚠ Muy importante</div>
+      <div class="titulo">⚠ MUY IMPORTANTE</div>
       El día del evento vas a tener que pasar por el <strong>buffet</strong>, decir tu código, y retirar el número físico del talonario. <strong>Es obligatorio tenerlo en la mano</strong> para poder reclamar el premio si te toca ganar — sin el número físico, no hay forma de canjearlo.
     </div>
 
@@ -282,6 +288,9 @@
       <p style="margin:0; color:var(--muted);">La aprobación tarda unos minutos...</p>
     </div>
 
+    <div id="avisoCerrarSinTerminar" class="aviso-error" style="color:var(--amarillo); border-color:var(--amarillo); background:rgba(255,209,102,0.1);">
+      ⚠ Si cerrás sin terminar, tus números se liberan al toque — alguien más los puede ver disponibles y agarrarlos.
+    </div>
     <button class="btn-cerrar" id="btnCerrarModal">Cerrar</button>
   </div>
 </div>
@@ -297,8 +306,8 @@
 <div class="overlay" id="overlayConsulta">
   <div class="modal">
     <h2>🔍 Consultá tu comprobante</h2>
-    <p>Poné el código que te dimos al reservar (ej: URQ-4821).</p>
-    <input type="text" id="inputCodigoConsulta" placeholder="URQ-XXXXX" style="text-transform:uppercase;" />
+    <p>Ingresá el código que te dimos al confirmar la compra.</p>
+    <input type="text" id="inputCodigoConsulta" placeholder="XXXXX" style="text-transform:uppercase;" />
     <div id="errorConsulta" class="aviso-error" style="display:none;"></div>
     <button class="btn-confirmar" id="btnBuscarCodigo">Buscar</button>
 
@@ -347,7 +356,7 @@
     if (!el) return;
     const diffMs = FECHA_LIMITE_VENTA.getTime() - Date.now();
     if (diffMs <= 0) {
-      el.textContent = "00:00:00";
+      el.textContent = "00 horas 00 minutos 00 segundos";
       if (intervaloCuentaRegresiva) clearInterval(intervaloCuentaRegresiva);
       return;
     }
@@ -356,11 +365,12 @@
     const minutos = Math.floor((diffMs / (1000 * 60)) % 60);
     const segundos = Math.floor((diffMs / 1000) % 60);
     const pad2 = n => String(n).padStart(2, "0");
+    const unidad = (n, singular, plural) => (n === 1 ? singular : plural);
     el.innerHTML =
-      (dias > 0 ? dias + '<span class="unidad">d</span> ' : '') +
-      pad2(horas) + '<span class="unidad">h</span> ' +
-      pad2(minutos) + '<span class="unidad">m</span> ' +
-      pad2(segundos) + '<span class="unidad">s</span>';
+      (dias > 0 ? dias + ' <span class="unidad">' + unidad(dias, "día", "días") + '</span> ' : '') +
+      pad2(horas) + ' <span class="unidad">' + unidad(horas, "hora", "horas") + '</span> ' +
+      pad2(minutos) + ' <span class="unidad">' + unidad(minutos, "minuto", "minutos") + '</span> ' +
+      pad2(segundos) + ' <span class="unidad">' + unidad(segundos, "segundo", "segundos") + '</span>';
   }
   actualizarCuentaRegresiva();
   intervaloCuentaRegresiva = setInterval(actualizarCuentaRegresiva, 1000);
@@ -410,7 +420,7 @@
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "";
     for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return "URQ-" + s;
+    return s;
   }
   function compressImage(file, maxWidth = 900, quality = 0.75) {
     return new Promise((resolve, reject) => {
@@ -676,6 +686,7 @@
     document.getElementById("btnConfirmarTodo").disabled = false;
     document.getElementById("btnConfirmarTodo").textContent = "✅ Confirmar y avisar por WhatsApp";
     document.getElementById("estadoConfirmado").style.display = "none";
+    document.getElementById("avisoCerrarSinTerminar").style.display = "block";
     archivoComprobante = null;
     document.getElementById("overlayReservado").classList.add("show");
   }
@@ -764,6 +775,7 @@
       // El modal pasa a solo lectura, y se abre WhatsApp con el aviso pre-armado
       document.getElementById("modalReserva").classList.add("bloqueado");
       btn.style.display = "none";
+      document.getElementById("avisoCerrarSinTerminar").style.display = "none";
       document.getElementById("estadoConfirmado").style.display = "block";
       abrirWhatsapp(reservaActual);
     } catch (e) {
@@ -917,10 +929,12 @@
 
   function renderMatrizPremios() {
     const cont = document.getElementById("matrizPremios");
+    const titulo = document.getElementById("tituloPremios");
     cont.innerHTML = "";
     const conFoto = premiosImagenes.filter(img => !!img);
-    if (conFoto.length === 0) { cont.style.display = "none"; return; }
+    if (conFoto.length === 0) { cont.style.display = "none"; titulo.style.display = "none"; return; }
     cont.style.display = "grid";
+    titulo.style.display = "block";
     conFoto.forEach(img => {
       const slot = document.createElement("div");
       slot.className = "premio-slot";
