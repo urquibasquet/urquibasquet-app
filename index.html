@@ -3790,7 +3790,15 @@ function TorneoPlanner() {
       fontFamily: FONT_MONO,
       textAlign: "center"
     }
-  })), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      flexWrap: "wrap",
+      marginLeft: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: abrirModalPremios,
     className: "cs-btn torneo-desktop-only",
     style: {
@@ -3861,7 +3869,7 @@ function TorneoPlanner() {
       cursor: "pointer",
       fontFamily: FONT
     }
-  }, "📊 ", exportandoCompradores ? "Exportando..." : "Exportar compradores")), /*#__PURE__*/React.createElement("p", {
+  }, "📊 ", exportandoCompradores ? "Exportando..." : "Exportar compradores"))), /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
       fontSize: 12.5,
@@ -5897,6 +5905,7 @@ function UrquiApp() {
   }, "Cerrar sesión")), /*#__PURE__*/React.createElement("div", null, view === "cronograma" ? /*#__PURE__*/React.createElement(DailySchedule, null) : /*#__PURE__*/React.createElement(TorneoPlanner, null)));
 }
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(/*#__PURE__*/React.createElement(LoginGate, null, /*#__PURE__*/React.createElement(UrquiApp, null)));</script>
+root.render(/*#__PURE__*/React.createElement(LoginGate, null, /*#__PURE__*/React.createElement(UrquiApp, null)));
+</script>
 </body>
 </html>
