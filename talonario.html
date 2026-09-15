@@ -60,9 +60,10 @@
     text-align: center; font-size: 13px; font-weight: 700; color: var(--claro); margin-bottom: 12px;
   }
   .matriz-premios {
-    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 28px 0 32px;
+    display: grid; grid-template-columns: repeat(auto-fit, 110px); gap: 10px;
+    justify-content: center; margin: 28px 0 32px;
   }
-  @media (max-width: 560px) { .matriz-premios { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 560px) { .matriz-premios { grid-template-columns: repeat(auto-fit, 88px); } }
   .premio-slot {
     position: relative; aspect-ratio: 1; border-radius: 10px; overflow: visible;
     background: var(--gris); border: 1px solid var(--borde);
@@ -78,9 +79,8 @@
     .premio-slot:hover .premio-contenido {
       transform: scale(1.6); z-index: 20; box-shadow: 0 8px 30px rgba(0,0,0,0.6); border: 2px solid var(--naranja);
     }
-    /* Las columnas de los bordes agrandan hacia adentro, para que nunca se corten con el borde de la ventana */
-    .matriz-premios .premio-slot:nth-child(6n+1) .premio-contenido { transform-origin: left center; }
-    .matriz-premios .premio-slot:nth-child(6n) .premio-contenido { transform-origin: right center; }
+    .premio-slot.borde-izq:hover .premio-contenido { transform-origin: left center; }
+    .premio-slot.borde-der:hover .premio-contenido { transform-origin: right center; }
   }
   .packs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 22px 0; }
   .pack-btn {
@@ -132,8 +132,8 @@
   .key:active { transform: translateY(2px); box-shadow: 0 1px 0 0 #1E8F52, 0 2px 2px rgba(0,0,0,0.3); }
   .key.ocupado { background: var(--rojo); color: #3A0E0E; cursor: not-allowed; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
   .key.ocupado:active { transform: none; box-shadow: 0 3px 0 0 #A32E2E, 0 4px 4px rgba(0,0,0,0.3); }
-  .key.reservado { background: #fcfc03; color: #3A3A00; cursor: not-allowed; box-shadow: 0 3px 0 0 #c4c400, 0 4px 4px rgba(0,0,0,0.3); }
-  .key.reservado:active { transform: none; box-shadow: 0 3px 0 0 #c4c400, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado { background: #fcfc03; color: #3A3A00; cursor: not-allowed; box-shadow: 0 3px 0 0 #fcfc03, 0 4px 4px rgba(0,0,0,0.3); }
+  .key.reservado:active { transform: none; box-shadow: 0 3px 0 0 #fcfc03, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido { background: var(--azul); color: var(--negro); box-shadow: 0 3px 0 0 #3E75D6, 0 4px 4px rgba(0,0,0,0.3); }
   .key.elegido:active { box-shadow: 0 1px 0 0 #3E75D6, 0 2px 2px rgba(0,0,0,0.3); }
   .key:disabled { opacity: 0.55; }
@@ -941,9 +941,23 @@
       slot.innerHTML = '<div class="premio-contenido"><img src="' + img + '" /></div>';
       cont.appendChild(slot);
     });
+    // Despues de que el navegador acomoda la grilla, marcamos que fotos quedaron
+    // en la columna mas a la izquierda o mas a la derecha, para que el zoom de esas
+    // agrande "hacia adentro" y nunca se corte con el borde de la ventana.
+    requestAnimationFrame(() => {
+      const slots = [...cont.querySelectorAll(".premio-slot")];
+      if (slots.length === 0) return;
+      const minLeft = Math.min(...slots.map(s => s.offsetLeft));
+      const maxRight = Math.max(...slots.map(s => s.offsetLeft + s.offsetWidth));
+      slots.forEach(s => {
+        s.classList.toggle("borde-izq", s.offsetLeft <= minLeft + 1);
+        s.classList.toggle("borde-der", (s.offsetLeft + s.offsetWidth) >= maxRight - 1);
+      });
+    });
   }
 
   renderMatrizPremios();
+  window.addEventListener("resize", () => { if (premiosImagenes.some(img => !!img)) renderMatrizPremios(); });
   if (db) {
     db.collection("config").doc("premios").get().then(snap => {
       if (snap.exists && Array.isArray(snap.data().imagenes)) {
