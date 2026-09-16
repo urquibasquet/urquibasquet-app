@@ -3057,6 +3057,8 @@ function TorneoPlanner() {
   const [descargandoContador, setDescargandoContador] = useState(false);
   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false);
   const [modalPremiosAbierto, setModalPremiosAbierto] = useState(false);
+  const [reiniciandoTalonario, setReiniciandoTalonario] = useState(false);
+  const [imagenAmpliada, setImagenAmpliada] = useState(null);
   const [premiosImagenes, setPremiosImagenes] = useState(new Array(12).fill(null));
   const [cargandoPremios, setCargandoPremios] = useState(false);
   const [historialPagos, setHistorialPagos] = useState([]);
@@ -3068,7 +3070,11 @@ function TorneoPlanner() {
       const snap = await window.__fb.db.collection("comprobantes").get();
       const lista = [];
       snap.forEach(doc => lista.push(doc.data()));
-      lista.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+      lista.sort((a, b) => {
+        const ta = a.subidoEn && a.subidoEn.toMillis ? a.subidoEn.toMillis() : 0;
+        const tb = b.subidoEn && b.subidoEn.toMillis ? b.subidoEn.toMillis() : 0;
+        return tb - ta; // mas nuevo primero
+      });
       setHistorialPagos(lista);
     } catch (e) {
       console.error("Error al cargar el historial:", e);
@@ -3088,6 +3094,9 @@ function TorneoPlanner() {
   });
   function fmtPrecioNum(n) {
     return "$" + Math.round(n || 0).toLocaleString("es-AR");
+  }
+  function mensajeConfirmacion(comp) {
+    return "Hola " + (comp.nombre || "") + "! Te confirmo tu pago ✅. Tu código es *" + comp.codigo + "* " + "y te recordamos que lo tenés que pasar a retirar por el buffet el día del evento — " + "es obligatorio tener el número físico en la mano para poder canjearlo por el premio si te toca ganar.";
   }
   async function abrirModalPremios() {
     setModalPremiosAbierto(true);
@@ -3120,6 +3129,35 @@ function TorneoPlanner() {
       alert("No se pudo subir la foto.");
     }
   }
+  async function reiniciarTalonario() {
+    const ok1 = window.confirm("⚠ Esto borra TODAS las reservas y comprobantes del talonario — números vendidos, pendientes, todo — como si nadie hubiera comprado nada. NO se puede deshacer.");
+    if (!ok1) return;
+    const escrito = window.prompt('Para confirmar, escribí exactamente REINICIAR (en mayúsculas):');
+    if (escrito !== "REINICIAR") {
+      if (escrito !== null) alert("No coincide con REINICIAR — no se hizo ningún cambio.");
+      return;
+    }
+    setReiniciandoTalonario(true);
+    try {
+      const snapNumeros = await window.__fb.db.collection("sorteoNumeros").get();
+      const refsNumeros = [];
+      snapNumeros.forEach(d => refsNumeros.push(d.ref));
+      const snapComp = await window.__fb.db.collection("comprobantes").get();
+      const refsComp = [];
+      snapComp.forEach(d => refsComp.push(d.ref));
+      const todos = [...refsNumeros, ...refsComp];
+      for (let i = 0; i < todos.length; i += 450) {
+        const batch = window.__fb.db.batch();
+        todos.slice(i, i + 450).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
+      alert("✅ Talonario reiniciado — se borraron " + refsNumeros.length + " números y " + refsComp.length + " comprobantes.");
+    } catch (e) {
+      console.error("Error al reiniciar el talonario:", e);
+      alert("No se pudo reiniciar. Probá de nuevo.");
+    }
+    setReiniciandoTalonario(false);
+  }
   async function confirmarPago(comprobante) {
     setAccionandoCodigo(comprobante.codigo);
     try {
@@ -3137,7 +3175,7 @@ function TorneoPlanner() {
         });
       });
       await batch.commit();
-      const mensajeParaPegar = "¡Confirmado! ✅ Tu pago quedó registrado.\n\n" + "El día del evento pasá por el buffet, decí este código, y retirá tu número físico del talonario:\n\n" + comprobante.codigo + "\n\nEs obligatorio tenerlo en la mano para poder reclamar el premio si te toca ganar.";
+      const mensajeParaPegar = mensajeConfirmacion(comprobante);
       try {
         await navigator.clipboard.writeText(mensajeParaPegar);
       } catch (clipErr) {/* portapapeles no disponible, no pasa nada */}
@@ -3869,7 +3907,27 @@ function TorneoPlanner() {
       cursor: "pointer",
       fontFamily: FONT
     }
-  }, "📊 ", exportandoCompradores ? "Exportando..." : "Exportar compradores"))), /*#__PURE__*/React.createElement("p", {
+  }, "📊 ", exportandoCompradores ? "Exportando..." : "Exportar compradores"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: reiniciarTalonario,
+    disabled: reiniciandoTalonario,
+    style: {
+      background: "transparent",
+      border: `1px solid ${ROJO}55`,
+      borderRadius: 8,
+      color: `${ROJO}CC`,
+      padding: "6px 12px",
+      fontSize: 11.5,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "🗑 ", reiniciandoTalonario ? "Reiniciando..." : "Reiniciar talonario")), /*#__PURE__*/React.createElement("p", {
     style: {
       color: MUTED,
       fontSize: 12.5,
@@ -5561,7 +5619,7 @@ function TorneoPlanner() {
       }
     }, comp.comprobanteImg && /*#__PURE__*/React.createElement("img", {
       src: comp.comprobanteImg,
-      onClick: () => window.open(comp.comprobanteImg),
+      onClick: () => setImagenAmpliada(comp.comprobanteImg),
       style: {
         width: 60,
         height: 60,
@@ -5598,9 +5656,9 @@ function TorneoPlanner() {
       }
     }, comp.codigo), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
-        navigator.clipboard.writeText(comp.codigo).catch(() => {});
+        navigator.clipboard.writeText(mensajeConfirmacion(comp)).catch(() => {});
       },
-      title: "Copiar código",
+      title: "Copiar mensaje de confirmación",
       style: {
         background: "transparent",
         border: `1px solid ${BORDE}`,
@@ -5674,7 +5732,28 @@ function TorneoPlanner() {
       marginTop: 10,
       fontFamily: FONT
     }
-  }, "Cerrar"))));
+  }, "Cerrar"))), imagenAmpliada && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setImagenAmpliada(null),
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.85)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      zIndex: 2000,
+      cursor: "zoom-out"
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: imagenAmpliada,
+    style: {
+      maxWidth: "100%",
+      maxHeight: "100%",
+      borderRadius: 10,
+      boxShadow: "0 8px 40px rgba(0,0,0,0.6)"
+    }
+  })));
 }
 
 // ============================================================
