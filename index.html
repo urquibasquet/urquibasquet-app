@@ -3129,6 +3129,22 @@ function TorneoPlanner() {
       alert("No se pudo subir la foto.");
     }
   }
+  async function borrarFotoPremio(indice) {
+    if (!window.confirm("¿Borrar esta foto de premio?")) return;
+    try {
+      const nuevas = [...premiosImagenes];
+      nuevas[indice] = null;
+      setPremiosImagenes(nuevas);
+      await window.__fb.db.collection("config").doc("premios").set({
+        imagenes: nuevas
+      }, {
+        merge: true
+      });
+    } catch (e) {
+      console.error("Error al borrar la foto del premio:", e);
+      alert("No se pudo borrar la foto.");
+    }
+  }
   async function reiniciarTalonario() {
     const ok1 = window.confirm("⚠ Esto borra TODAS las reservas y comprobantes del talonario — números vendidos, pendientes, todo — como si nadie hubiera comprado nada. NO se puede deshacer.");
     if (!ok1) return;
@@ -5519,7 +5535,33 @@ function TorneoPlanner() {
       color: MUTED,
       fontSize: 18
     }
-  }, "🏆"), /*#__PURE__*/React.createElement("input", {
+  }, "🏆"), img && /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.preventDefault();
+      e.stopPropagation();
+      borrarFotoPremio(i);
+    },
+    title: "Borrar esta foto",
+    style: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      width: 20,
+      height: 20,
+      borderRadius: "50%",
+      background: "rgba(0,0,0,0.7)",
+      border: `1px solid ${ROJO}`,
+      color: ROJO,
+      fontSize: 11,
+      fontWeight: 800,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0,
+      lineHeight: 1
+    }
+  }, "✕"), /*#__PURE__*/React.createElement("input", {
     type: "file",
     accept: "image/*",
     style: {
