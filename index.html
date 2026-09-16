@@ -5290,50 +5290,17 @@ function TorneoPlanner() {
     color: ROJO
   })), /*#__PURE__*/React.createElement(Card, {
     title: "💰 Balance Final"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "5px 0",
-      borderBottom: `1px solid ${BORDE}`,
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: BLANCO,
-      fontSize: 12,
-      fontFamily: FONT
-    }
-  }, "Capital inicial"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    inputMode: "numeric",
-    placeholder: "$ 0",
-    value: fmtMoneyInput(capitalInicial),
-    onChange: e => setCapitalInicial(parseMoneyInput(e.target.value)),
-    style: {
-      background: GRIS_CLARO,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      color: AZUL,
-      padding: "5px 9px",
-      width: 130,
-      fontSize: 12.5,
-      fontWeight: 700,
-      outline: "none",
-      fontFamily: FONT_MONO,
-      textAlign: "right"
-    }
-  }))), /*#__PURE__*/React.createElement(Row, {
-    label: "Ganancia del evento",
-    value: fmt(gananciaTotal),
-    color: gananciaTotal >= 0 ? VERDE : ROJO
+  }, /*#__PURE__*/React.createElement(Row, {
+    label: "Capital Inicial",
+    value: fmt(capitalInicial)
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: "Total Ingresos",
+    value: fmt(totalIngresos),
+    color: VERDE
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: "Total Egresos",
+    value: fmt(totalEgresos),
+    color: ROJO
   }), /*#__PURE__*/React.createElement(Row, {
     label: "SALDO FINAL",
     value: fmt(saldoFinal),
