@@ -122,7 +122,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
   .key {
     position: relative; aspect-ratio: 1; border-radius: 7px; border: none;
-    font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700;
+    font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     color: var(--negro); background: var(--verde);
     box-shadow: 0 3px 0 0 #1E8F52, 0 4px 4px rgba(0,0,0,0.3);
@@ -210,10 +210,6 @@
     <button class="link-consultar" id="btnAbrirConsulta">¿Ya reservaste? Consultá tu comprobante →</button>
   </div>
 
-  <div class="volver-fila" id="pasosRow">
-    <button class="btn-volver-inline" id="btnVolver" style="display:none;" title="Volver a elegir pack">←</button>
-  </div>
-
   <!-- PANTALLA 1: elegir pack -->
   <div class="pantalla activa" id="pantalla1">
     <div class="banner-limite" id="bannerLimite">
@@ -230,6 +226,10 @@
 
   <!-- PANTALLA 2: elegir numeros -->
   <div class="pantalla" id="pantalla2">
+    <div class="volver-fila" id="pasosRow">
+      <button class="btn-volver-inline" id="btnVolver" title="Volver a elegir pack">←</button>
+    </div>
+
     <div class="estado-seleccion">
       <div class="txt">Elegiste <strong id="cantElegidos">0</strong> de <strong id="cantNecesarios">0</strong>:</div>
       <div class="numeros-elegidos" id="numerosElegidosChips"></div>
@@ -446,7 +446,6 @@
   function mostrarPantalla(n) {
     document.getElementById("pantalla1").classList.toggle("activa", n === 1);
     document.getElementById("pantalla2").classList.toggle("activa", n === 2);
-    document.getElementById("btnVolver").style.display = n === 2 ? "flex" : "none";
     window.scrollTo(0, 0);
   }
 
