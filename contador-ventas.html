@@ -133,6 +133,32 @@
   .btn-minus { border-color: var(--rojo); color: var(--rojo); }
   .btn-plus { border-color: var(--verde); color: var(--verde); }
 
+  .item-metodo-leyenda {
+    font-size: 8.5px; color: var(--muted); text-align: right; line-height: 1.25; flex-shrink: 0; min-width: 40px; max-width: 46px;
+  }
+
+  .overlay-metodo {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .overlay-metodo.show { display: flex; }
+  .overlay-metodo .caja {
+    background: var(--gris); border: 1px solid var(--borde); border-radius: 14px; padding: 20px;
+    width: 100%; max-width: 300px; text-align: center;
+  }
+  .overlay-metodo .caja h3 { margin: 0 0 4px; font-size: 15px; color: var(--blanco); }
+  .overlay-metodo .caja p { margin: 0 0 16px; font-size: 12px; color: var(--muted); }
+  .overlay-metodo .btn-metodo {
+    width: 100%; padding: 14px 0; margin-bottom: 10px; border-radius: 10px; border: none;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+  }
+  .overlay-metodo .btn-efectivo { background: var(--verde); color: var(--negro); }
+  .overlay-metodo .btn-transferencia { background: var(--azul); color: var(--negro); }
+  .overlay-metodo .btn-cancelar-metodo {
+    width: 100%; padding: 10px 0; border-radius: 10px; border: 1px solid var(--borde);
+    background: transparent; color: var(--claro); font-size: 12.5px; cursor: pointer; margin-top: 2px;
+  }
+
   .footer-actions { flex-shrink: 0; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   .btn-action {
     flex: 1; min-width: 160px; display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -151,6 +177,15 @@
 </style>
 </head>
 <body>
+<div class="overlay-metodo" id="overlayMetodo">
+  <div class="caja">
+    <h3 id="metodoTitulo">¿Efectivo o Transferencia?</h3>
+    <p id="metodoSubtitulo"></p>
+    <button class="btn-metodo btn-efectivo" id="btnMetodoEfectivo">💵 Efectivo</button>
+    <button class="btn-metodo btn-transferencia" id="btnMetodoTransferencia">💳 Transferencia</button>
+    <button class="btn-cancelar-metodo" id="btnMetodoCancelar">Cancelar</button>
+  </div>
+</div>
 <div class="wrap">
 
   <div class="header">
@@ -268,6 +303,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     return o;
   }
 
+  // Cada talla de remera guarda ademas cuanto se vendio en efectivo vs transferencia,
+  // para poder mostrar el desglose sin perder el conteo total que ya usaban stock/resumen.
+  function cerosMetodo(lista) {
+    var o = {};
+    lista.forEach(function (n) { o[n] = { efectivo: 0, transferencia: 0 }; });
+    return o;
+  }
+
   function cargarEstado() {
     try {
       var raw = window.localStorage.getItem(STORAGE_KEY);
@@ -278,10 +321,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           sorteo: Object.assign({}, ceros(SORTEO_ITEMS), parsed.sorteo || {}),
           remerasAlgodon: Object.assign({}, ceros(TALLES), parsed.remerasAlgodon || {}),
           remerasJuego: Object.assign({}, ceros(TALLES), parsed.remerasJuego || {}),
+          remerasAlgodonMetodo: Object.assign({}, cerosMetodo(TALLES), parsed.remerasAlgodonMetodo || {}),
+          remerasJuegoMetodo: Object.assign({}, cerosMetodo(TALLES), parsed.remerasJuegoMetodo || {}),
         };
       }
     } catch (e) { console.error("No se pudo leer lo guardado:", e); }
-    return { gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS), remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES) };
+    return {
+      gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS),
+      remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES),
+      remerasAlgodonMetodo: cerosMetodo(TALLES), remerasJuegoMetodo: cerosMetodo(TALLES),
+    };
   }
 
   var estado = cargarEstado();
@@ -316,6 +365,79 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     actualizarResumenSorteo();
   }
 
+  var METODO_MAPS = { remerasAlgodon: "remerasAlgodonMetodo", remerasJuego: "remerasJuegoMetodo" };
+
+  // Suma o resta una venta de remera, guardando ademas a que metodo de pago corresponde.
+  function cambiarConMetodo(grupo, nombre, metodo, delta) {
+    var grupoMetodo = METODO_MAPS[grupo];
+    var actual = estado[grupoMetodo][nombre][metodo] || 0;
+    var nuevo = actual + delta;
+    if (nuevo < 0) nuevo = 0;
+    estado[grupoMetodo][nombre][metodo] = nuevo;
+
+    // El total (el que ya usan stock/resumen) siempre es la suma de los dos metodos.
+    var total = estado[grupoMetodo][nombre].efectivo + estado[grupoMetodo][nombre].transferencia;
+    estado[grupo][nombre] = total;
+    document.getElementById("count-" + grupo + "-" + slug(nombre)).textContent = total;
+
+    var stockMap = STOCK_MAPS[grupo];
+    if (stockMap) {
+      var restante = (stockMap[nombre] || 0) - total;
+      var el = document.getElementById("stock-" + grupo + "-" + slug(nombre));
+      if (el) actualizarColorStock(el, restante);
+    }
+    actualizarLeyendaMetodo(grupo, nombre);
+    guardar();
+    actualizarResumenSorteo();
+  }
+
+  function actualizarLeyendaMetodo(grupo, nombre) {
+    var grupoMetodo = METODO_MAPS[grupo];
+    var datos = estado[grupoMetodo][nombre];
+    var el = document.getElementById("metodo-" + grupo + "-" + slug(nombre));
+    if (!el) return;
+    var partes = [];
+    if (datos.efectivo > 0) partes.push(datos.efectivo + " Efectivo");
+    if (datos.transferencia > 0) partes.push(datos.transferencia + " Transferencia");
+    el.textContent = partes.join(", ");
+  }
+
+  var overlayMetodo = document.getElementById("overlayMetodo");
+  var callbackMetodoActual = null;
+
+  // Abre el popup preguntando el metodo. Si soloUno viene con "efectivo" o "transferencia",
+  // resta directo de ese metodo sin preguntar (asi no molesta cuando no hay ambigüedad).
+  function preguntarMetodo(grupo, nombre, delta) {
+    var grupoMetodo = METODO_MAPS[grupo];
+    var datos = estado[grupoMetodo][nombre];
+    if (delta < 0) {
+      var conEfectivo = datos.efectivo > 0, conTransferencia = datos.transferencia > 0;
+      if (conEfectivo && !conTransferencia) { cambiarConMetodo(grupo, nombre, "efectivo", delta); return; }
+      if (conTransferencia && !conEfectivo) { cambiarConMetodo(grupo, nombre, "transferencia", delta); return; }
+      if (!conEfectivo && !conTransferencia) return;
+    }
+    document.getElementById("metodoTitulo").textContent = delta > 0 ? "¿Efectivo o Transferencia?" : "¿De cuál descontar?";
+    document.getElementById("metodoSubtitulo").textContent = nombre;
+    callbackMetodoActual = function (metodo) { cambiarConMetodo(grupo, nombre, metodo, delta); };
+    overlayMetodo.classList.add("show");
+  }
+
+  function cerrarPopupMetodo() {
+    overlayMetodo.classList.remove("show");
+    callbackMetodoActual = null;
+  }
+
+  document.getElementById("btnMetodoEfectivo").onclick = function () {
+    if (callbackMetodoActual) callbackMetodoActual("efectivo");
+    cerrarPopupMetodo();
+  };
+  document.getElementById("btnMetodoTransferencia").onclick = function () {
+    if (callbackMetodoActual) callbackMetodoActual("transferencia");
+    cerrarPopupMetodo();
+  };
+  document.getElementById("btnMetodoCancelar").onclick = cerrarPopupMetodo;
+  overlayMetodo.onclick = function (e) { if (e.target === overlayMetodo) cerrarPopupMetodo(); };
+
   function actualizarColorStock(el, restante) {
     var color = restante <= 0 ? "var(--rojo)" : (restante === 1 ? "#FFD166" : "var(--muted)");
     el.innerHTML = "Quedan <strong>" + restante + "</strong>";
@@ -325,7 +447,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   function slug(s) { return s.replace(/[^a-zA-Z0-9]/g, "_"); }
 
-  function renderLista(contenedorId, grupo, lista, precios, stockMap) {
+  function renderLista(contenedorId, grupo, lista, precios, stockMap, conMetodo) {
     var cont = document.getElementById(contenedorId);
     lista.forEach(function (nombre) {
       var row = document.createElement("div");
@@ -334,7 +456,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       var btnMinus = document.createElement("button");
       btnMinus.className = "btn-count btn-minus";
       btnMinus.textContent = "\u2212";
-      btnMinus.onclick = function () { cambiar(grupo, nombre, -1); };
+      btnMinus.onclick = conMetodo
+        ? function () { preguntarMetodo(grupo, nombre, -1); }
+        : function () { cambiar(grupo, nombre, -1); };
 
       var textWrap = document.createElement("div");
       textWrap.className = "item-text";
@@ -361,6 +485,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         textWrap.appendChild(stockEl);
       }
 
+      if (conMetodo) {
+        var leyendaEl = document.createElement("div");
+        leyendaEl.className = "item-metodo-leyenda";
+        leyendaEl.id = "metodo-" + grupo + "-" + slug(nombre);
+        row.appendChild(textWrap);
+        row.appendChild(leyendaEl);
+      } else {
+        row.appendChild(textWrap);
+      }
+
       var countEl = document.createElement("div");
       countEl.className = "item-count";
       countEl.id = "count-" + grupo + "-" + slug(nombre);
@@ -369,20 +503,23 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       var btnPlus = document.createElement("button");
       btnPlus.className = "btn-count btn-plus";
       btnPlus.textContent = "+";
-      btnPlus.onclick = function () { cambiar(grupo, nombre, 1); };
+      btnPlus.onclick = conMetodo
+        ? function () { preguntarMetodo(grupo, nombre, 1); }
+        : function () { cambiar(grupo, nombre, 1); };
 
-      row.appendChild(textWrap);
       row.appendChild(btnMinus);
       row.appendChild(countEl);
       row.appendChild(btnPlus);
       cont.appendChild(row);
+
+      if (conMetodo) actualizarLeyendaMetodo(grupo, nombre);
     });
   }
 
   renderLista("gastroList", "gastro", GASTRO_ITEMS, GASTRO_PRECIOS);
   renderLista("sorteoList", "sorteo", SORTEO_ITEMS, SORTEO_PRECIOS);
-  renderLista("remerasAlgodonList", "remerasAlgodon", TALLES, null, STOCK_ALGODON);
-  renderLista("remerasJuegoList", "remerasJuego", TALLES, null, STOCK_JUEGO);
+  renderLista("remerasAlgodonList", "remerasAlgodon", TALLES, null, STOCK_ALGODON, true);
+  renderLista("remerasJuegoList", "remerasJuego", TALLES, null, STOCK_JUEGO, true);
 
   document.getElementById("talonarioInfo").textContent = "Talonario de: " + TOTAL_NUMEROS_TALONARIO + " números";
 
@@ -449,11 +586,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (!ok) return;
     var ok2 = window.confirm("\u00daltima confirmaci\u00f3n: se van a borrar todos los n\u00fameros cargados. \u00bfContinuar?");
     if (!ok2) return;
-    estado = { gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS), remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES) };
+    estado = {
+      gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS),
+      remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES),
+      remerasAlgodonMetodo: cerosMetodo(TALLES), remerasJuegoMetodo: cerosMetodo(TALLES),
+    };
     GASTRO_ITEMS.forEach(function (n) { document.getElementById("count-gastro-" + slug(n)).textContent = 0; });
     SORTEO_ITEMS.forEach(function (n) { document.getElementById("count-sorteo-" + slug(n)).textContent = 0; });
-    TALLES.forEach(function (n) { document.getElementById("count-remerasAlgodon-" + slug(n)).textContent = 0; });
-    TALLES.forEach(function (n) { document.getElementById("count-remerasJuego-" + slug(n)).textContent = 0; });
+    TALLES.forEach(function (n) { document.getElementById("count-remerasAlgodon-" + slug(n)).textContent = 0; actualizarLeyendaMetodo("remerasAlgodon", n); });
+    TALLES.forEach(function (n) { document.getElementById("count-remerasJuego-" + slug(n)).textContent = 0; actualizarLeyendaMetodo("remerasJuego", n); });
     guardar();
     mostrarToast("Contadores reiniciados");
   };
