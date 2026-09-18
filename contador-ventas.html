@@ -562,16 +562,22 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     wsSorteo["!cols"] = [{ wch: 14 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsSorteo, "Sorteo");
 
-    var filasRemAlg = [["Talle", "Remeras vendidas"]];
-    TALLES.forEach(function (n) { filasRemAlg.push([n, estado.remerasAlgodon[n] || 0]); });
+    var filasRemAlg = [["Talle", "Remeras vendidas", "Efectivo", "Transferencia"]];
+    TALLES.forEach(function (n) {
+      var m = estado.remerasAlgodonMetodo[n] || { efectivo: 0, transferencia: 0 };
+      filasRemAlg.push([n, estado.remerasAlgodon[n] || 0, m.efectivo, m.transferencia]);
+    });
     var wsRemAlg = XLSX.utils.aoa_to_sheet(filasRemAlg);
-    wsRemAlg["!cols"] = [{ wch: 10 }, { wch: 16 }];
+    wsRemAlg["!cols"] = [{ wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsRemAlg, "Remeras Algodon");
 
-    var filasRemJue = [["Talle", "Remeras vendidas"]];
-    TALLES.forEach(function (n) { filasRemJue.push([n, estado.remerasJuego[n] || 0]); });
+    var filasRemJue = [["Talle", "Remeras vendidas", "Efectivo", "Transferencia"]];
+    TALLES.forEach(function (n) {
+      var m = estado.remerasJuegoMetodo[n] || { efectivo: 0, transferencia: 0 };
+      filasRemJue.push([n, estado.remerasJuego[n] || 0, m.efectivo, m.transferencia]);
+    });
     var wsRemJue = XLSX.utils.aoa_to_sheet(filasRemJue);
-    wsRemJue["!cols"] = [{ wch: 10 }, { wch: 16 }];
+    wsRemJue["!cols"] = [{ wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsRemJue, "Remeras Juego");
 
     var ahora = new Date();
