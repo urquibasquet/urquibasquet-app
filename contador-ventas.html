@@ -133,9 +133,12 @@
   .btn-minus { border-color: var(--rojo); color: var(--rojo); }
   .btn-plus { border-color: var(--verde); color: var(--verde); }
 
+  /* Leyenda "1 Efectivo, 2 Transferencia": una sola linea, centrada en vertical con el - 0 + y pegada a el */
   .item-metodo-leyenda {
-    font-size: 8.5px; color: var(--muted); text-align: right; line-height: 1.25; flex-shrink: 0; min-width: 40px; max-width: 46px;
+    font-size: 10px; font-weight: 600; color: var(--claro); text-align: right; line-height: 1;
+    white-space: nowrap; flex-shrink: 0; align-self: center; margin-right: 2px;
   }
+  .item-metodo-leyenda:empty { display: none; }
 
   .overlay-metodo {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500;
@@ -154,6 +157,10 @@
   }
   .overlay-metodo .btn-efectivo { background: var(--verde); color: var(--negro); }
   .overlay-metodo .btn-transferencia { background: var(--azul); color: var(--negro); }
+  .overlay-metodo.sin-stock .caja { border-color: var(--rojo); }
+  .overlay-metodo.sin-stock .caja h3 { color: var(--rojo); font-size: 20px; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .overlay-metodo.sin-stock .caja p { margin-bottom: 14px; font-size: 13px; }
+  .overlay-metodo.sin-stock .btn-metodo { display: none; }
   .overlay-metodo .btn-cancelar-metodo {
     width: 100%; padding: 10px 0; border-radius: 10px; border: 1px solid var(--borde);
     background: transparent; color: var(--claro); font-size: 12.5px; cursor: pointer; margin-top: 2px;
@@ -416,9 +423,28 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (conTransferencia && !conEfectivo) { cambiarConMetodo(grupo, nombre, "transferencia", delta); return; }
       if (!conEfectivo && !conTransferencia) return;
     }
+    // Si ya no queda stock de esa talla, no tiene sentido preguntar el metodo de pago:
+    // se avisa con un cartel y no se suma nada.
+    if (delta > 0) {
+      var stockMap = STOCK_MAPS[grupo];
+      var restante = (stockMap ? (stockMap[nombre] || 0) : 0) - (estado[grupo][nombre] || 0);
+      if (restante <= 0) { mostrarSinStock(grupo, nombre); return; }
+    }
+    overlayMetodo.classList.remove("sin-stock");
+    document.getElementById("btnMetodoCancelar").textContent = "Cancelar";
     document.getElementById("metodoTitulo").textContent = delta > 0 ? "¿Efectivo o Transferencia?" : "¿De cuál descontar?";
     document.getElementById("metodoSubtitulo").textContent = nombre;
     callbackMetodoActual = function (metodo) { cambiarConMetodo(grupo, nombre, metodo, delta); };
+    overlayMetodo.classList.add("show");
+  }
+
+  var NOMBRE_GRUPO_REMERA = { remerasAlgodon: "Remeras algodón", remerasJuego: "Remeras de juego" };
+  function mostrarSinStock(grupo, nombre) {
+    callbackMetodoActual = null;
+    overlayMetodo.classList.add("sin-stock");
+    document.getElementById("metodoTitulo").textContent = "NO HAY MÁS STOCK";
+    document.getElementById("metodoSubtitulo").textContent = (NOMBRE_GRUPO_REMERA[grupo] || "") + " · Talle " + nombre;
+    document.getElementById("btnMetodoCancelar").textContent = "Entendido";
     overlayMetodo.classList.add("show");
   }
 
