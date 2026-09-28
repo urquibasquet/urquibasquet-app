@@ -203,6 +203,7 @@
     <div class="status-bar">
       <span id="statusText">Guardado automáticamente ✓</span>
       <span>· <strong id="lastSaved">—</strong></span>
+      <span>· <strong id="infoCompradores">—</strong></span>
     </div>
   </div>
 
@@ -627,6 +628,14 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     SORTEO_ITEMS.forEach(function (n) { document.getElementById("count-sorteo-" + slug(n)).textContent = 0; });
     TALLES.forEach(function (n) { document.getElementById("count-remerasAlgodon-" + slug(n)).textContent = 0; actualizarLeyendaMetodo("remerasAlgodon", n); });
     TALLES.forEach(function (n) { document.getElementById("count-remerasJuego-" + slug(n)).textContent = 0; actualizarLeyendaMetodo("remerasJuego", n); });
+    // lo que se calcula a partir de los contadores tambien tiene que volver a su valor de partida
+    actualizarResumenSorteo();
+    [["remerasAlgodon", STOCK_ALGODON], ["remerasJuego", STOCK_JUEGO]].forEach(function (par) {
+      TALLES.forEach(function (n) {
+        var el = document.getElementById("stock-" + par[0] + "-" + slug(n));
+        if (el) actualizarColorStock(el, par[1][n] || 0);
+      });
+    });
     guardar();
     mostrarToast("Contadores reiniciados");
   };
@@ -643,16 +652,50 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   var COMPRADORES_KEY = "urqui-contador-compradores";
   // Estos vienen ya cargados desde la app al descargar el archivo (compradores confirmados a esa fecha)
   var COMPRADORES_INICIALES = {};
-  var compradores = Object.assign({}, COMPRADORES_INICIALES);
-  try {
-    var raw = window.localStorage.getItem(COMPRADORES_KEY);
-    if (raw) compradores = Object.assign({}, compradores, JSON.parse(raw));
-  } catch (e) { console.error("No se pudo leer la lista de compradores:", e); }
+  var DESCARGADO_EN = "";
+  var compradores = {};
 
   function guardarCompradores() {
     try { window.localStorage.setItem(COMPRADORES_KEY, JSON.stringify(compradores)); }
     catch (e) { console.error("No se pudo guardar el estado de entrega:", e); }
   }
+
+  // Los compradores que trajo ESTA descarga son la verdad (asi un pago pasa de "sin confirmar" a "confirmado", y las compras
+  // que ya no existen en la app no siguen apareciendo). De lo guardado en el navegador solo se conserva la marca de "entregado"
+  // y lo que se cargo a mano desde un Excel. La memoria del navegador se comparte entre copias del Contador: por eso no se mezcla.
+  (function () {
+    var guardados = {};
+    try {
+      var raw = window.localStorage.getItem(COMPRADORES_KEY);
+      if (raw) guardados = JSON.parse(raw) || {};
+    } catch (e) { console.error("No se pudo leer la lista de compradores:", e); }
+    Object.keys(COMPRADORES_INICIALES).forEach(function (cod) {
+      var c = Object.assign({}, COMPRADORES_INICIALES[cod]);
+      c.entregado = !!(guardados[cod] && guardados[cod].entregado);
+      compradores[cod] = c;
+    });
+    Object.keys(guardados).forEach(function (cod) {
+      if (!compradores[cod] && guardados[cod] && guardados[cod].origen === "importado") compradores[cod] = guardados[cod];
+    });
+    guardarCompradores();
+  })();
+
+  // Dice a simple vista con que datos de compradores esta trabajando este archivo.
+  function mostrarInfoCompradores() {
+    var el = document.getElementById("infoCompradores");
+    if (!el) return;
+    var n = Object.keys(compradores).length;
+    var txt = n + (n === 1 ? " comprador" : " compradores");
+    if (DESCARGADO_EN && DESCARGADO_EN.indexOf("__") !== 0) {
+      var d = new Date(DESCARGADO_EN);
+      if (!isNaN(d.getTime())) {
+        var p2 = function (x) { return (x < 10 ? "0" : "") + x; };
+        txt += " (datos al " + p2(d.getDate()) + "/" + p2(d.getMonth() + 1) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + ")";
+      }
+    }
+    el.textContent = txt;
+  }
+  mostrarInfoCompradores();
 
   function sufijo(codigo) {
     return codigo.replace(/^URQ-?/, "").toUpperCase();
@@ -755,10 +798,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             pack: pack || "",
             entregado: entregadoPrevio || false,
             estado: "confirmado",
+            origen: "importado",
           };
         });
         compradores = Object.assign({}, compradores, nuevos);
         window.localStorage.setItem(COMPRADORES_KEY, JSON.stringify(compradores));
+        mostrarInfoCompradores();
         mostrarToast(Object.keys(nuevos).length + " compradores importados ✓");
       } catch (err) {
         console.error("Error al importar compradores:", err);
