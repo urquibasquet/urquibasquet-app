@@ -196,7 +196,7 @@ const DEFAULT_CATEGORIES = [{
 function slugify(s) {
   return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `cat-${Date.now()}`;
 }
-const PIXELS_PER_HOUR = 100;
+const PIXELS_PER_HOUR = 160; // 15 min = 40 px: entran 2 renglones legibles
 const START_HOUR = 7;
 const VISIBLE_HOURS = 24 - START_HOUR;
 const DAY_MINUTES = 24 * 60;
@@ -494,6 +494,70 @@ function timeToXY(sunData, hourDecimal, width, height) {
   const y = height / 2 - norm * (height / 2 - margin);
   return [x, y];
 }
+
+// ── Pronóstico real (Open-Meteo: gratis, sin clave). Disponible desde hoy hasta 15 días adelante;
+// fuera de ese rango, o sin internet, el widget usa la estimación climatológica de siempre.
+const FORECAST_CACHE = {};
+function weatherEmoji(code) {
+  if (code === 0) return "☀️";
+  if (code <= 2) return "🌤️";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 57) return "🌦️";
+  if (code >= 61 && code <= 67 || code >= 80 && code <= 82) return "🌧️";
+  if (code >= 71 && code <= 77) return "❄️";
+  if (code >= 95) return "⛈️";
+  return "🌡️";
+}
+function useForecast(date) {
+  const key = toDateKey(date);
+  const [fc, setFc] = useState(() => FORECAST_CACHE[key] && FORECAST_CACHE[key].data || null);
+  useEffect(() => {
+    const today0 = new Date();
+    today0.setHours(0, 0, 0, 0);
+    const d0 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const days = Math.round((d0 - today0) / 86400000);
+    if (days < 0 || days > 15) {
+      setFc(null);
+      return;
+    }
+    const hit = FORECAST_CACHE[key];
+    if (hit && Date.now() - hit.at < 3600000) {
+      setFc(hit.data);
+      return;
+    }
+    let cancelled = false;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${ROSARIO_LAT}&longitude=${ROSARIO_LON}` + `&hourly=temperature_2m,precipitation_probability,weather_code&timezone=America%2FArgentina%2FBuenos_Aires&start_date=${key}&end_date=${key}`;
+    fetch(url).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))).then(j => {
+      const h = j && j.hourly;
+      if (!h || !Array.isArray(h.temperature_2m) || h.temperature_2m.length < 24) throw new Error("sin datos");
+      const data = {
+        temp: h.temperature_2m,
+        pop: h.precipitation_probability || [],
+        code: h.weather_code || []
+      };
+      FORECAST_CACHE[key] = {
+        at: Date.now(),
+        data
+      };
+      if (!cancelled) setFc(data);
+    }).catch(() => {
+      if (!cancelled) setFc(hit ? hit.data : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+  return fc;
+}
+function fcTempAt(fc, h) {
+  const i = Math.max(0, Math.min(23, Math.floor(h))),
+    j = Math.min(23, i + 1);
+  const a = fc.temp[i],
+    b = fc.temp[j];
+  if (a == null) return null;
+  return Math.round(a + ((b == null ? a : b) - a) * (h - i));
+}
 function SunWidget({
   date,
   startTime,
@@ -505,8 +569,20 @@ function SunWidget({
   const midH = (startH + endH) / 2;
   const elevStart = solarElevationAt(sunData, startH);
   const phase = classifyLight(elevStart, startH < sunData.solarNoonH);
-  const tempStart = estimateTemp(date, sunData, startH);
-  const tempEnd = estimateTemp(date, sunData, endH);
+  const fc = useForecast(date);
+  const fcStart = fc ? fcTempAt(fc, startH) : null,
+    fcEnd = fc ? fcTempAt(fc, endH) : null;
+  const tempStart = fcStart != null ? fcStart : estimateTemp(date, sunData, startH);
+  const tempEnd = fcEnd != null ? fcEnd : estimateTemp(date, sunData, endH);
+  const esPronostico = fcStart != null && fcEnd != null;
+  let lluvia = null,
+    icono = null;
+  if (esPronostico && fc.pop.length >= 24) {
+    const i0 = Math.max(0, Math.min(23, Math.floor(startH))),
+      i1 = Math.max(i0, Math.min(23, Math.ceil(endH) - 1));
+    lluvia = Math.max(...fc.pop.slice(i0, i1 + 1).map(v => v || 0));
+    icono = weatherEmoji(fc.code[Math.max(0, Math.min(23, Math.floor(midH)))]);
+  }
   const W = 280,
     H = 96;
   const arcPath = useMemo(() => buildArcPath(sunData, W, H), [sunData]);
@@ -556,7 +632,7 @@ function SunWidget({
       fontWeight: 700,
       color: "#FF8C42"
     }
-  }, "≈ ", tempStart, "°C", tempEnd !== tempStart ? ` → ${tempEnd}°C` : "")), /*#__PURE__*/React.createElement("svg", {
+  }, icono ? icono + " " : "", esPronostico ? "" : "≈ ", tempStart, "°C", tempEnd !== tempStart ? ` → ${tempEnd}°C` : "")), /*#__PURE__*/React.createElement("svg", {
     width: "100%",
     viewBox: `0 0 ${W} ${H}`,
     style: {
@@ -608,7 +684,19 @@ function SunWidget({
     style: {
       color: "#B7BAC2"
     }
-  }, startTime, "–", endTime), /*#__PURE__*/React.createElement("span", null, "🌇 ", hToClock(sunData.sunsetH))));
+  }, startTime, "–", endTime), /*#__PURE__*/React.createElement("span", null, "🌇 ", hToClock(sunData.sunsetH))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 10,
+      color: "#5B5E68"
+    }
+  }, /*#__PURE__*/React.createElement("span", null, esPronostico ? "Pronóstico (Open-Meteo)" : "Estimación histórica del mes"), lluvia != null && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: lluvia >= 50 ? "#FF6B6B" : lluvia >= 25 ? "#FFD166" : "#35D0BA",
+      fontWeight: 700
+    }
+  }, "🌧️ lluvia ", lluvia, "%")));
 }
 function DailySchedule() {
   const [date, setDate] = useState(TOURNEY_DATE);
@@ -819,8 +907,8 @@ function DailySchedule() {
   }, [events, start, end, editingId]);
 
   // Vista de impresión: la misma grilla (horas a la izquierda, actividades en paralelo), partida en hojas de PRINT_CHUNK horas
-  const PRINT_HPX = 100,
-    PRINT_CHUNK = 6;
+  const PRINT_HPX = 120,
+    PRINT_CHUNK = 5;
   const printChunks = useMemo(() => {
     if (!events.length) return [];
     const from = Math.floor(Math.min(...events.map(e => minutesFromTime(e.start))) / 60);
@@ -1125,6 +1213,7 @@ function DailySchedule() {
     style: labelStyle
   }, "Desde"), /*#__PURE__*/React.createElement("input", {
     type: "time",
+    step: 900,
     value: start,
     onChange: e => setStart(e.target.value),
     style: {
@@ -1140,6 +1229,7 @@ function DailySchedule() {
     style: labelStyle
   }, "Hasta"), /*#__PURE__*/React.createElement("input", {
     type: "time",
+    step: 900,
     value: end,
     onChange: e => setEnd(e.target.value),
     style: {
@@ -1427,7 +1517,7 @@ function DailySchedule() {
     className: "cs-scroll",
     ref: scrollRef,
     style: {
-      height: isMobile ? 600 : 680,
+      height: isMobile ? 600 : 720,
       overflowY: "auto",
       position: "relative"
     }
@@ -1450,10 +1540,10 @@ function DailySchedule() {
     key: i,
     style: {
       position: "absolute",
-      top: i * PIXELS_PER_HOUR - 7,
+      top: i * PIXELS_PER_HOUR - 8,
       right: 8,
       fontFamily: "'Montserrat', system-ui, sans-serif",
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: 700,
       color: "#5B5E68"
     }
@@ -1472,6 +1562,17 @@ function DailySchedule() {
       left: 0,
       right: 0,
       borderTop: i === 0 ? "none" : "1px solid #24262D"
+    }
+  })), Array.from({
+    length: VISIBLE_HOURS * 4
+  }).map((_, q) => q % 2 === 1 && /*#__PURE__*/React.createElement("div", {
+    key: "q" + q,
+    style: {
+      position: "absolute",
+      top: q * (PIXELS_PER_HOUR / 4),
+      left: 0,
+      right: 0,
+      borderTop: "1px dotted #1A1C22"
     }
   })), Array.from({
     length: VISIBLE_HOURS * 2
@@ -1522,6 +1623,7 @@ function DailySchedule() {
     const height = Math.max(6, nextStartMin != null ? Math.min(desiredHeight, (nextStartMin - minutesFromTime(ev.start)) / 60 * PIXELS_PER_HOUR - 2) : desiredHeight);
     const widthPct = 100 / totalCols;
     const color = catColor(ev.category);
+    const compact = height < 64; // actividades cortas: nombre en 1 renglón (con …) y horario debajo
     return /*#__PURE__*/React.createElement("div", {
       key: ev.id,
       className: "cs-block",
@@ -1535,7 +1637,7 @@ function DailySchedule() {
         background: `${color}1F`,
         borderLeft: `3px solid ${color}`,
         borderRadius: 6,
-        padding: "5px 8px",
+        padding: compact ? "3px 8px" : "6px 9px",
         overflow: "hidden",
         cursor: isMobile ? "default" : "pointer"
       },
@@ -1567,20 +1669,23 @@ function DailySchedule() {
       size: 11
     })), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 700,
-        whiteSpace: "pre-line",
+        whiteSpace: compact ? "nowrap" : "pre-line",
+        textOverflow: compact ? "ellipsis" : "clip",
         wordBreak: "break-word",
-        lineHeight: 1.25,
+        lineHeight: 1.2,
         overflow: "hidden",
-        paddingRight: isMobile ? 0 : 16
+        paddingRight: isMobile ? 0 : 18
       }
     }, ev.name), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 10.5,
+        fontSize: 12,
         color: "#B7BAC2",
         fontFamily: "'Montserrat', system-ui, sans-serif",
-        marginTop: 2
+        marginTop: compact ? 0 : 2,
+        lineHeight: 1.2,
+        whiteSpace: "nowrap"
       }
     }, ev.start, "–", ev.end));
   })))), /*#__PURE__*/React.createElement("div", {
@@ -1716,7 +1821,7 @@ function DailySchedule() {
           border: `1px solid ${color}`,
           borderLeftWidth: 4,
           borderRadius: 3,
-          padding: "2px 5px",
+          padding: "1px 5px",
           overflow: "hidden",
           boxSizing: "border-box"
         }
@@ -1724,15 +1829,19 @@ function DailySchedule() {
         style: {
           fontSize: 10.5,
           fontWeight: 700,
-          lineHeight: 1.2,
-          whiteSpace: "pre-line",
+          lineHeight: 1.15,
+          whiteSpace: height < 44 ? "nowrap" : "pre-line",
+          textOverflow: "ellipsis",
+          overflow: "hidden",
           wordBreak: "break-word"
         }
       }, ev.name), /*#__PURE__*/React.createElement("div", {
         style: {
           fontSize: 9.5,
           color: "#333",
-          marginTop: 1
+          marginTop: 0,
+          lineHeight: 1.15,
+          whiteSpace: "nowrap"
         }
       }, ev.start, "–", ev.end, eS < cS ? " (cont.)" : ""));
     }))));
