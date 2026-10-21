@@ -508,7 +508,7 @@ function SunWidget({
   const tempStart = estimateTemp(date, sunData, startH);
   const tempEnd = estimateTemp(date, sunData, endH);
   const W = 280,
-    H = 62;
+    H = 96;
   const arcPath = useMemo(() => buildArcPath(sunData, W, H), [sunData]);
   const [sx, sy] = timeToXY(sunData, Math.max(0, Math.min(24, startH)), W, H);
   const [ex, ey] = timeToXY(sunData, Math.max(0, Math.min(24, endH)), W, H);
@@ -521,8 +521,8 @@ function SunWidget({
       padding: "12px 14px",
       display: "flex",
       flexDirection: "column",
+      justifyContent: "space-between",
       gap: 5,
-      marginBottom: 16,
       width: "100%",
       boxSizing: "border-box"
     }
@@ -777,14 +777,14 @@ function DailySchedule() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-scroll to current time (or 8am) on day change
+  // Al entrar o cambiar de día, la grilla se posiciona en la primera actividad (las horas vacías de arriba siguen ahí)
   useEffect(() => {
     if (!scrollRef.current) return;
-    const target = today ? now.getHours() * 60 + now.getMinutes() : 8 * 60;
-    const top = (target / 60 - START_HOUR) * PIXELS_PER_HOUR - 120;
+    const firstStart = events.length ? Math.min(...events.map(e => minutesFromTime(e.start))) : 8 * 60;
+    const top = (firstStart / 60 - START_HOUR) * PIXELS_PER_HOUR - 24;
     scrollRef.current.scrollTo({
       top: Math.max(0, top),
-      behavior: "smooth"
+      behavior: "auto"
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateKey, loaded]);
@@ -1054,7 +1054,7 @@ function DailySchedule() {
     style: {
       display: "flex",
       gap: 24,
-      alignItems: "flex-start"
+      alignItems: "stretch"
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: `cs-activity-form${!showForm ? " cs-hide-mobile" : ""}`,
@@ -1064,13 +1064,13 @@ function DailySchedule() {
       background: "#1D2027",
       border: "1px solid #2A2D35",
       borderRadius: 14,
-      padding: 18
+      padding: "14px 16px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       fontWeight: 600,
-      marginBottom: 12,
+      marginBottom: 8,
       color: editingId ? "#FF8C42" : "#F2F1ED",
       display: "flex",
       alignItems: "center",
@@ -1097,13 +1097,13 @@ function DailySchedule() {
     ref: nameInputRef,
     value: name,
     onChange: e => setName(e.target.value),
-    rows: 6,
+    rows: 4,
     style: {
       ...inputStyle,
       resize: "vertical",
       fontFamily: "inherit",
       lineHeight: 1.4,
-      minHeight: 150,
+      minHeight: 100,
       height: "100%"
     }
   })), /*#__PURE__*/React.createElement("div", {
@@ -1146,7 +1146,34 @@ function DailySchedule() {
       ...inputStyle,
       width: "100%"
     }
-  }))), /*#__PURE__*/React.createElement("label", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flex: "1.3 1 0",
+      minWidth: 0,
+      alignItems: "flex-end"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: handleSubmit,
+    disabled: !name.trim() || start >= end,
+    className: "cs-btn",
+    style: {
+      ...primaryBtnStyle,
+      opacity: !name.trim() || start >= end ? 0.4 : 1,
+      cursor: !name.trim() || start >= end ? "not-allowed" : "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(Check, {
+    size: 14
+  }), " ", editingId ? "Guardar cambios" : "Agregar"), editingId && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: resetForm,
+    className: "cs-btn",
+    style: secondaryBtnStyle
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 14
+  })))), /*#__PURE__*/React.createElement("label", {
     style: {
       ...labelStyle,
       marginTop: 10,
@@ -1376,37 +1403,12 @@ function DailySchedule() {
     style: warnStyle
   }, "La hora de fin debe ser posterior al inicio."), overlapWarning && start < end && /*#__PURE__*/React.createElement("div", {
     style: warnStyle
-  }, overlapWarning), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      marginTop: 14
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: handleSubmit,
-    disabled: !name.trim() || start >= end,
-    className: "cs-btn",
-    style: {
-      ...primaryBtnStyle,
-      opacity: !name.trim() || start >= end ? 0.4 : 1,
-      cursor: !name.trim() || start >= end ? "not-allowed" : "pointer"
-    }
-  }, /*#__PURE__*/React.createElement(Check, {
-    size: 14
-  }), " ", editingId ? "Guardar cambios" : "Agregar"), editingId && /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: resetForm,
-    className: "cs-btn",
-    style: secondaryBtnStyle
-  }, /*#__PURE__*/React.createElement(X, {
-    size: 14
-  })))))), /*#__PURE__*/React.createElement("div", {
+  }, overlapWarning)))), /*#__PURE__*/React.createElement("div", {
     className: "cs-top-sun",
     style: {
       width: 340,
       flexShrink: 0,
-      marginBottom: -16
+      display: "flex"
     }
   }, /*#__PURE__*/React.createElement(SunWidget, {
     date: date,
