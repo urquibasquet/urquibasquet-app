@@ -1009,6 +1009,7 @@ function DailySchedule() {
         }
         .cs-print-only { display: none; }
         @page { size: A4 landscape; margin: 10mm; }
+        @page itinerario { size: A4 portrait; margin: 14mm; }
         @media print {
           html, body, #root, #root > div { background: #fff !important; min-height: 0 !important; }
           .cs-print-only, .cs-print-only * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1854,6 +1855,10 @@ function DailySchedule() {
     }))));
   }), events.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
+      page: "itinerario"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
       breakBefore: "page",
       pageBreakBefore: "always",
       fontSize: 14,
@@ -1902,7 +1907,7 @@ function DailySchedule() {
       fontWeight: 700,
       whiteSpace: "pre-line"
     }
-  }, ev.name)))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
+  }, ev.name))))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
 }
 function StatChip({
   label,
