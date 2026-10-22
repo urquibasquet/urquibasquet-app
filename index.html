@@ -917,6 +917,12 @@ function DailySchedule() {
     for (let h = from; h < to; h += PRINT_CHUNK) out.push([h, Math.min(h + PRINT_CHUNK, to)]);
     return out;
   }, [events]);
+
+  // Detalle impreso: el ITINERARIO no incluye las disciplinas (categoría "Disciplinas"); esas van en su propio listado
+  const esDisciplina = ev => (categories.find(c => c.id === ev.category)?.label || "").toLowerCase().includes("disciplina");
+  const eventosOrdenados = [...events].sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
+  const itinerarioEvs = eventosOrdenados.filter(ev => !esDisciplina(ev));
+  const disciplinaEvs = eventosOrdenados.filter(esDisciplina);
   function resetForm() {
     setName("");
     setStart("09:00");
@@ -1004,6 +1010,7 @@ function DailySchedule() {
         .cs-print-only { display: none; }
         @page { size: A4 landscape; margin: 10mm; }
         @media print {
+          html, body, #root, #root > div { background: #fff !important; min-height: 0 !important; }
           .cs-print-only, .cs-print-only * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .cs-app-shell { display: none !important; }
           .cs-print-only { display: block !important; }
@@ -1853,22 +1860,49 @@ function DailySchedule() {
       fontWeight: 700,
       marginBottom: 8
     }
-  }, "DETALLE DE ACTIVIDADES"), /*#__PURE__*/React.createElement("div", {
+  }, "ITINERARIO"), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid #000",
       marginBottom: 10
     }
-  }), [...events].sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start)).map(ev => /*#__PURE__*/React.createElement("div", {
+  }), itinerarioEvs.map(ev => /*#__PURE__*/React.createElement("div", {
     key: ev.id,
     style: {
-      marginBottom: 10
+      marginBottom: 10,
+      breakInside: "avoid"
     }
   }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]   (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       whiteSpace: "pre-line"
     }
-  }, formatForExport(ev.name, catLabel(ev.category).toLowerCase().includes("sorteo"))))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
+  }, formatForExport(ev.name, catLabel(ev.category).toLowerCase().includes("sorteo"))))), disciplinaEvs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 18,
+      breakInside: "avoid"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      marginBottom: 8
+    }
+  }, "DISCIPLINAS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #000",
+      marginBottom: 10
+    }
+  }), disciplinaEvs.map(ev => /*#__PURE__*/React.createElement("div", {
+    key: ev.id,
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      whiteSpace: "pre-line"
+    }
+  }, ev.name)))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
 }
 function StatChip({
   label,
