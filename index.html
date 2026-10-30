@@ -2574,6 +2574,7 @@ const UNID_LABEL = {
 const compatibles = u => Object.keys(FAM).filter(k => FAM[k].b === (FAM[u] || FAM.u).b);
 const ETIQUETAS = ["Kit", "Buffet", "Decoración", "Sonido", "Logística", "Merch", "Premios", "Otros"];
 const ETQ_COLOR = {
+  Canje: "#B58CFF",
   Kit: NARANJA,
   Buffet: AMARILLO,
   "Decoración": "#B58CFF",
@@ -4036,12 +4037,11 @@ function TorneoPlanner({
     r: calcCompraKit(it, kitCompras[it.id])
   }));
   const costoKitTotal = kitCalc.reduce((a, x) => a + (x.c.canje ? 0 : x.r.monto), 0);
-  const kitFaltaPrecio = kitCalc.filter(x => x.r.faltaPrecio).length;
+  const kitFaltaPrecio = kitCalc.filter(x => x.r.faltaPrecio && !x.c.canje).length;
   const costoManualTotal = manualItems.reduce((a, b) => a + (b.canje ? 0 : Number(b.precio) || 0), 0);
   const totalInscripcionConKit = totalInscripcion - costoKitTotal;
   const totalIngresos = recaudadoSorteo + totalInscripcion + ventaRemeras7ma + gananciaJuego + totalVentaProductos + totalSponsors;
-  const costoMerch7ma = remerasMeta.canje ? 0 : costoTotal7ma;
-  const totalEgresos = costoKitTotal + costoManualTotal + costoInsumosTotal + costoMerch7ma;
+  const totalEgresos = costoKitTotal + costoManualTotal + costoInsumosTotal;
   const gananciaTotal = totalIngresos - totalEgresos;
   const saldoFinal = capitalInicial + gananciaTotal;
 
@@ -4087,23 +4087,16 @@ function TorneoPlanner({
     canje: !!it.canje,
     falta: !(Number(it.precio) > 0),
     detalle: ""
-  })), ...(total7ma > 0 ? [{
-    key: "merch",
-    origen: "merch",
-    desc: "Remeras 7ma",
-    etiqueta: "Merch",
-    monto: costoMerch7ma,
-    momento: remerasMeta.momento || "antes",
-    pagado: !!remerasMeta.pagado,
-    canje: !!remerasMeta.canje,
-    falta: false,
-    detalle: `${total7ma} × ${fmt(costoRemera7ma)} · cantidad en la pestaña Remeras`
-  }] : [])];
+  }))].map(l => l.canje ? {
+    ...l,
+    falta: false
+  } : l);
   const gastoFaltantes = gastoLineas.filter(l => l.falta);
   const gastoPagado = gastoLineas.filter(l => l.pagado && !l.canje).reduce((a, l) => a + l.monto, 0);
   const valorTotal = gastoLineas.reduce((a, l) => a + l.monto, 0);
   const canjeTotal = gastoLineas.filter(l => l.canje).reduce((a, l) => a + l.monto, 0);
-  const pctCanje = valorTotal > 0 ? Math.round(canjeTotal / valorTotal * 100) : 0;
+  const nCanje = gastoLineas.filter(l => l.canje).length;
+  const pctCanje = canjeTotal > 0 && valorTotal > 0 ? Math.round(canjeTotal / valorTotal * 100) : gastoLineas.length > 0 ? Math.round(nCanje / gastoLineas.length * 100) : 0;
   function patchLinea(l, p) {
     if (l.origen === "kit") setKitCompras(prev => ({
       ...prev,
@@ -5492,7 +5485,7 @@ function TorneoPlanner({
     key: item.id || i,
     item: item,
     costoEq: kitCalc[i] ? kitCalc[i].r.monto / CUPO : 0,
-    faltaPrecio: kitCalc[i] ? kitCalc[i].r.faltaPrecio : false,
+    faltaPrecio: kitCalc[i] ? kitCalc[i].r.faltaPrecio && !kitCalc[i].c.canje : false,
     onChange: next => {
       const n = [...kitItems];
       n[i] = next;
@@ -5584,8 +5577,8 @@ function TorneoPlanner({
   }, i) => /*#__PURE__*/React.createElement(Row, {
     key: it.id || i,
     label: `${it.desc || `Ítem ${i + 1}`} (${numTxt(it.cantidad)} ${UNID_LABEL[it.unidad || "u"]})`,
-    value: r.faltaPrecio ? "falta precio" : c.canje ? `canje · valor ${fmt(r.monto)}` : `${fmt(r.monto / CUPO)} × ${CUPO} = ${fmt(r.monto)}`,
-    color: r.faltaPrecio ? NARANJA : c.canje ? "#B58CFF" : undefined,
+    value: c.canje ? "canje" : r.faltaPrecio ? "falta precio" : `${fmt(r.monto / CUPO)} × ${CUPO} = ${fmt(r.monto)}`,
+    color: c.canje ? "#B58CFF" : r.faltaPrecio ? NARANJA : undefined,
     sub: true
   })), /*#__PURE__*/React.createElement(Row, {
     label: "Costo por equipo",
@@ -6447,13 +6440,13 @@ function TorneoPlanner({
           alignItems: "center",
           marginTop: 4
         }
-      }, badge(l.etiqueta, col), l.canje && badge("Canje", CANJE), l.falta && badge("Falta precio", NARANJA), kit && !kit.r.faltaPrecio && /*#__PURE__*/React.createElement("span", {
+      }, badge(l.etiqueta, col), l.canje && badge("Canje", CANJE), l.falta && badge("Falta precio", NARANJA), kit && !l.canje && !kit.r.faltaPrecio && /*#__PURE__*/React.createElement("span", {
         style: {
           color: MUTED,
           fontSize: 11.5,
           fontFamily: FONT
         }
-      }, "Comprar ", kit.r.packs, " × ", kit.c.pres || "unidad"))), /*#__PURE__*/React.createElement("div", {
+      }, "Comprar ", kit.r.packs, " × ", kit.c.pres || "unidad"))), !l.canje && /*#__PURE__*/React.createElement("div", {
         style: {
           textAlign: "right",
           flexShrink: 0
@@ -6741,62 +6734,7 @@ function TorneoPlanner({
       titulo: "🏁 Después del torneo",
       ayuda: "Lo que se paga una vez terminado"
     }];
-    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Card, {
-      title: "Gastos",
-      accent: true
-    }, /*#__PURE__*/React.createElement("p", {
-      style: {
-        color: MUTED,
-        fontSize: 12.5,
-        marginTop: 0,
-        marginBottom: 12,
-        fontFamily: FONT
-      }
-    }, "Todo lo que se paga, en un solo lugar: compras del kit, insumos de gastronomía, remeras y gastos sueltos. Tildá ✓ cuando esté pago, marcá \"Canje\" si el producto viene de un canje (no cuenta como plata que sale), y arrastrá ⠿ (o usá el botón) para pasarlo de antes a después."), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-        gap: 8
-      }
-    }, /*#__PURE__*/React.createElement(StatTile, {
-      label: "Total a gastar (plata)",
-      value: fmt(totalEgresos),
-      color: ROJO
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: "Ya pagado",
-      value: fmt(gastoPagado),
-      color: VERDE
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: "Falta pagar",
-      value: fmt(totalEgresos - gastoPagado),
-      color: NARANJA
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: "En canje",
-      value: `${pctCanje}%`,
-      color: CANJE,
-      sub: `${fmt(canjeTotal)} de ${fmt(valorTotal)} de valor total`
-    })), gastoFaltantes.length > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: `${NARANJA}14`,
-        border: `1px solid ${NARANJA}66`,
-        borderRadius: 8,
-        padding: "9px 12px",
-        marginTop: 10,
-        fontFamily: FONT
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: NARANJA,
-        fontSize: 12.5,
-        fontWeight: 700
-      }
-    }, "⚠ Falta precio en ", gastoFaltantes.length, " ", gastoFaltantes.length === 1 ? "ítem" : "ítems"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: CLARO,
-        fontSize: 11.5,
-        marginTop: 2
-      }
-    }, gastoFaltantes.map(l => l.desc || "(sin descripción)").join(" · ")))), bloques.map(bl => {
+    return /*#__PURE__*/React.createElement(React.Fragment, null, bloques.map(bl => {
       const ls = gastoLineas.filter(l => l.momento === bl.id);
       const tot = ls.filter(l => !l.canje).reduce((a, l) => a + l.monto, 0);
       const pag = ls.filter(l => l.pagado && !l.canje).reduce((a, l) => a + l.monto, 0);
@@ -6877,11 +6815,15 @@ function TorneoPlanner({
     const saldoProy = capitalInicial + ingresosProy - totalEgresos;
     const faltaPagar = totalEgresos - gastoPagado;
     const pendAntes = gastoLineas.filter(l => l.momento === "antes" && !l.pagado && !l.canje).reduce((a, l) => a + l.monto, 0);
-    const base = gastoLineas.filter(l => !l.canje && (tortaModo === "todo" || l.pagado));
-    const datos = ETIQUETAS.map(e => ({
+    const base = gastoLineas.filter(l => tortaModo === "todo" || l.pagado && !l.canje);
+    const datos = [...ETIQUETAS.map(e => ({
       etiqueta: e,
-      monto: base.filter(l => l.etiqueta === e).reduce((a, l) => a + l.monto, 0)
-    })).filter(d => d.monto > 0).sort((a, b) => b.monto - a.monto);
+      monto: base.filter(l => !l.canje && l.etiqueta === e).reduce((a, l) => a + l.monto, 0)
+    })), {
+      etiqueta: "Canje",
+      monto: base.filter(l => l.canje).reduce((a, l) => a + l.monto, 0)
+    }].filter(d => d.monto > 0).sort((a, b) => b.monto - a.monto);
+    const canjeSinValor = tortaModo === "todo" ? gastoLineas.filter(l => l.canje && !(l.monto > 0)).length : 0;
     const totTorta = datos.reduce((a, d) => a + d.monto, 0);
     const necesarioEq = totalEgresos - otrosIngresos;
     const equiposEq = precioPorEquipo > 0 ? Math.ceil(necesarioEq / precioPorEquipo) : 0;
@@ -6946,71 +6888,16 @@ function TorneoPlanner({
         gap: 8
       }
     }, /*#__PURE__*/React.createElement(StatTile, {
-      label: "Saldo hoy",
+      label: "Saldo",
       value: fmt(saldoFinal),
-      color: saldoFinal >= capitalInicial ? VERDE : ROJO,
-      sub: `con ${equipos} equipos inscriptos`
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: `Saldo con ${CUPO} equipos`,
-      value: fmt(saldoProy),
-      color: saldoProy >= capitalInicial ? VERDE : ROJO,
-      sub: "si se completa el cupo"
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: "Total a gastar (plata)",
-      value: fmt(totalEgresos),
-      color: ROJO,
-      sub: `pagado ${fmt(gastoPagado)}`
-    }), /*#__PURE__*/React.createElement(StatTile, {
-      label: "Falta pagar",
-      value: fmt(faltaPagar),
-      color: NARANJA,
-      sub: `ingresos hoy ${fmt(totalIngresos)}`
+      color: gananciaTotal >= 0 ? VERDE : ROJO,
+      sub: gananciaTotal >= 0 ? "Ganancia" : "Pérdida: hay que poner plata"
     }), /*#__PURE__*/React.createElement(StatTile, {
       label: "Canje",
       value: `${pctCanje}%`,
       color: CANJE,
-      sub: `${fmt(canjeTotal)} de ${fmt(valorTotal)} de valor`
+      sub: `${nCanje} de ${gastoLineas.length} ítems${canjeTotal > 0 ? ` · ${fmt(canjeTotal)} de valor` : ""}`
     })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        marginTop: 12,
-        fontFamily: FONT,
-        flexWrap: "wrap"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: CLARO,
-        fontSize: 12.5
-      }
-    }, "Capital inicial:"), /*#__PURE__*/React.createElement("input", {
-      type: "text",
-      inputMode: "numeric",
-      placeholder: "$ 0",
-      value: fmtMoneyInput(capitalInicial),
-      onChange: e => setCapitalInicial(parseMoneyInput(e.target.value)),
-      style: {
-        background: GRIS_CLARO,
-        border: `1px solid ${AZUL}`,
-        borderRadius: 6,
-        color: AZUL,
-        padding: "6px 10px",
-        width: 130,
-        fontSize: 14,
-        fontWeight: 700,
-        outline: "none",
-        fontFamily: FONT_MONO,
-        textAlign: "right"
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: MUTED,
-        fontSize: 11.5,
-        marginTop: 8,
-        fontFamily: FONT
-      }
-    }, "Saldo = capital inicial (", fmt(capitalInicial), ") + ingresos − todos los gastos. El saldo con ", CUPO, " equipos solo cambia lo que entra por inscripción."), /*#__PURE__*/React.createElement("div", {
       style: {
         background: GRIS_CLARO,
         borderRadius: 8,
@@ -7025,15 +6912,8 @@ function TorneoPlanner({
         color: BLANCO
       }
     }, "Punto de equilibrio:"), " ", necesarioEq <= 0 ? "con lo que ya entra sin contar inscripciones, los gastos están cubiertos." : equiposEq > CUPO ? `no alcanza ni con ${CUPO} equipos (faltarían ${fmt(necesarioEq - CUPO * precioPorEquipo)}).` : `con ${equiposEq} equipos inscriptos cubrís todos los gastos${equipos >= equiposEq ? " (ya lo lograste ✓)" : ` (hoy tenés ${equipos})`}.`)), /*#__PURE__*/React.createElement(Card, {
-      title: "🥧 En qué se va la plata"
-    }, /*#__PURE__*/React.createElement("p", {
-      style: {
-        color: MUTED,
-        fontSize: 11.5,
-        margin: "-4px 0 10px",
-        fontFamily: FONT
-      }
-    }, "Solo plata que sale: lo que viene de canje no cuenta acá."), /*#__PURE__*/React.createElement("div", {
+      title: "🥧 Gastos por categoría"
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 6,
@@ -7113,73 +6993,14 @@ function TorneoPlanner({
         minWidth: 82,
         textAlign: "right"
       }
-    }, fmt(d.monto))))))), /*#__PURE__*/React.createElement(Card, {
-      title: "📈 Avance"
-    }, /*#__PURE__*/React.createElement(ProgBar, {
-      label: "Equipos inscriptos",
-      value: equipos,
-      max: CUPO,
-      color: equipos >= CUPO ? VERDE : NARANJA
-    }), /*#__PURE__*/React.createElement(ProgBar, {
-      label: "Números del sorteo vendidos",
-      value: numerosVendidos,
-      max: totalNumeros,
-      color: AZUL
-    }), /*#__PURE__*/React.createElement(ProgBar, {
-      label: "Remeras 7ma vendidas",
-      value: r7VendidoEfectivo + r7VendidoTransferencia,
-      max: total7ma,
-      color: VERDE
-    }), /*#__PURE__*/React.createElement(ProgBar, {
-      label: "Gastos pagados",
-      value: gastoPagado,
-      max: totalEgresos,
-      color: ROJO,
-      texto: `${fmt(gastoPagado)} de ${fmt(totalEgresos)}`
-    })), /*#__PURE__*/React.createElement(Card, {
-      title: "📥 De dónde viene la plata"
-    }, ingresos.map(x => /*#__PURE__*/React.createElement("div", {
-      key: x.l,
+    }, fmt(d.monto)))))), canjeSinValor > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
-        marginBottom: 8,
+        color: MUTED,
+        fontSize: 11.5,
+        marginTop: 10,
         fontFamily: FONT
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        fontSize: 12.5,
-        marginBottom: 3
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: CLARO
-      }
-    }, x.l), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: BLANCO,
-        fontFamily: FONT_MONO,
-        fontWeight: 700
-      }
-    }, fmt(x.v))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        height: 6,
-        background: GRIS_CLARO,
-        borderRadius: 3
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: Math.round(x.v / maxIng * 100) + "%",
-        height: "100%",
-        background: VERDE,
-        borderRadius: 3
-      }
-    })))), /*#__PURE__*/React.createElement(Row, {
-      label: "TOTAL INGRESOS",
-      value: fmt(totalIngresos),
-      bold: true,
-      color: VERDE
-    })));
+    }, "🔄 ", canjeSinValor, " ", canjeSinValor === 1 ? "ítem de canje no tiene" : "ítems de canje no tienen", " valor cargado, por eso no suman en el gráfico (el valor se carga al desplegar la tarjeta en Gastos).")));
   })()), modalPremiosAbierto && /*#__PURE__*/React.createElement("div", {
     onClick: () => setModalPremiosAbierto(false),
     style: {
