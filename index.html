@@ -2559,7 +2559,10 @@ const ETQ_COLOR = {
   "Logística": "#7BD88F",
   Merch: VERDE,
   Premios: ROJO,
-  Otros: MUTED
+  Otros: MUTED,
+  "Inscripción": NARANJA,
+  Sorteo: AZUL,
+  Remeras: VERDE
 };
 const etqManual = it => (it.etiqueta === "Buffet" ? "Bufet" : it.etiqueta) || (/sonido|micr[oó]fono|\bdj\b|parlante/i.test(it.desc || "") ? "Sonido" : /decor|banderin|tela|globo/i.test(it.desc || "") ? "Decoración" : /premio|trofeo|copa|medalla/i.test(it.desc || "") ? "Premios" : /remera|merch|estampa/i.test(it.desc || "") ? "Merch" : /tupper|higiene|transporte|flete|log[ií]stica|carpa|mesa|silla/i.test(it.desc || "") ? "Logística" : "Otros");
 const etqInsumo = it => (it.etiqueta === "Buffet" ? "Bufet" : it.etiqueta) || (/decor/i.test(it.desc || "") ? "Decoración" : "Bufet");
@@ -4761,7 +4764,7 @@ function TorneoPlanner({
     label: "💸 Gastos"
   }, {
     key: "ventas",
-    label: "🧾 Ventas"
+    label: "💰 Ganancia"
   }, {
     key: "resumen",
     label: "📊 Resumen"
@@ -6365,7 +6368,7 @@ function TorneoPlanner({
       }, "+ Agregar gasto")));
     }));
   })(), tab === "ventas" && /*#__PURE__*/React.createElement(Card, {
-    title: "Ventas",
+    title: "Ganancia",
     accent: true
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6421,7 +6424,98 @@ function TorneoPlanner({
       cursor: "pointer",
       fontFamily: FONT
     }
-  }, "🖩 ", descargandoContador ? "Generando..." : "Contador Ventas"))), tab === "resumen" && (() => {
+  }, "🖩 ", descargandoContador ? "Generando..." : "Contador Ventas")), (() => {
+    const datos = [{
+      etiqueta: "Inscripción",
+      monto: totalInscripcion
+    }, {
+      etiqueta: "Sorteo",
+      monto: recaudadoSorteo
+    }, {
+      etiqueta: "Remeras",
+      monto: ventaRemeras7ma + gananciaJuego
+    }, {
+      etiqueta: "Bufet",
+      monto: totalVentaProductos
+    }].filter(d => d.monto > 0).sort((a, b) => b.monto - a.monto);
+    const tot = datos.reduce((a, d) => a + d.monto, 0);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginTop: 22,
+        paddingTop: 18,
+        borderTop: `1px solid ${BORDE}`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: NARANJA,
+        fontSize: 15,
+        fontWeight: 800,
+        marginBottom: 12,
+        fontFamily: FONT,
+        letterSpacing: "0.03em",
+        textTransform: "uppercase"
+      }
+    }, "🥧 De dónde viene la ganancia"), datos.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: MUTED,
+        fontSize: 13,
+        fontFamily: FONT
+      }
+    }, "Todavía no hay ingresos cargados.") : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 18,
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "center"
+      }
+    }, /*#__PURE__*/React.createElement(Donut, {
+      datos: datos,
+      total: tot
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: "1 1 220px",
+        minWidth: 0
+      }
+    }, datos.map(d => /*#__PURE__*/React.createElement("div", {
+      key: d.etiqueta,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "5px 0",
+        borderBottom: `1px solid ${BORDE}`,
+        fontFamily: FONT,
+        fontSize: 13
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 11,
+        height: 11,
+        borderRadius: 3,
+        background: ETQ_COLOR[d.etiqueta] || MUTED,
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: BLANCO,
+        flex: 1
+      }
+    }, d.etiqueta), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: MUTED,
+        fontSize: 12
+      }
+    }, Math.round(d.monto / tot * 100), "%"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: BLANCO,
+        fontFamily: FONT_MONO,
+        fontWeight: 700,
+        minWidth: 82,
+        textAlign: "right"
+      }
+    }, fmt(d.monto)))))));
+  })()), tab === "resumen" && (() => {
     const otrosIngresos = totalIngresos - totalInscripcion;
     const ingresosProy = otrosIngresos + CUPO * precioPorEquipo;
     const saldoProy = capitalInicial + ingresosProy - totalEgresos;
