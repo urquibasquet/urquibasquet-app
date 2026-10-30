@@ -2533,10 +2533,143 @@ function NewChecklistInput({
     color: NEGRO
   })));
 }
+const CUPO = 16;
+const newId = () => Math.random().toString(36).slice(2, 9);
+const FAM = {
+  u: {
+    b: "u",
+    f: 1
+  },
+  doc: {
+    b: "u",
+    f: 12
+  },
+  g: {
+    b: "g",
+    f: 1
+  },
+  kg: {
+    b: "g",
+    f: 1000
+  },
+  ml: {
+    b: "ml",
+    f: 1
+  },
+  l: {
+    b: "ml",
+    f: 1000
+  }
+};
+const UNID_ITEM = ["u", "g", "kg", "ml", "l"];
+const UNID_LABEL = {
+  u: "u",
+  doc: "docena",
+  g: "g",
+  kg: "kg",
+  ml: "ml",
+  l: "l"
+};
+const compatibles = u => Object.keys(FAM).filter(k => FAM[k].b === (FAM[u] || FAM.u).b);
+const ETIQUETAS = ["Kit", "Buffet", "Decoración", "Sonido", "Logística", "Merch", "Premios", "Otros"];
+const ETQ_COLOR = {
+  Kit: NARANJA,
+  Buffet: AMARILLO,
+  "Decoración": "#B58CFF",
+  Sonido: AZUL,
+  "Logística": "#7BD88F",
+  Merch: VERDE,
+  Premios: ROJO,
+  Otros: MUTED
+};
+const etqManual = it => it.etiqueta || (/sonido|micr[oó]fono|\bdj\b|parlante/i.test(it.desc || "") ? "Sonido" : /decor|banderin|tela|globo/i.test(it.desc || "") ? "Decoración" : /premio|trofeo|copa|medalla/i.test(it.desc || "") ? "Premios" : /remera|merch|estampa/i.test(it.desc || "") ? "Merch" : /tupper|higiene|transporte|flete|log[ií]stica|carpa|mesa|silla/i.test(it.desc || "") ? "Logística" : "Otros");
+const etqInsumo = it => it.etiqueta || (/decor/i.test(it.desc || "") ? "Decoración" : "Buffet");
+const numTxt = v => v === undefined || v === null || v === 0 || v === "" ? "" : String(v).replace(".", ",");
+const parseDec = str => {
+  const t = String(str).replace(",", ".");
+  return /^\d*\.?\d*$/.test(t) ? t : null;
+};
+const fmtCantBase = (v, b) => {
+  const r = n => (Math.round(n * 100) / 100).toLocaleString("es-AR");
+  if (b === "g") return v >= 1000 ? r(v / 1000) + " kg" : r(v) + " g";
+  if (b === "ml") return v >= 1000 ? r(v / 1000) + " l" : r(v) + " ml";
+  return r(v) + " u";
+};
+function calcCompraKit(item, c) {
+  c = c || {};
+  const fi = FAM[item.unidad] || FAM.u;
+  const cant = Number(item.cantidad) || 0;
+  const necesario = cant * CUPO * fi.f;
+  const cu = c.unidad && FAM[c.unidad] && FAM[c.unidad].b === fi.b ? c.unidad : item.unidad || "u";
+  const cont = (Number(c.contenido) || 0) * (FAM[cu] || fi).f;
+  const precio = Number(c.precio) || 0;
+  const aplica = cant > 0;
+  const faltaPrecio = aplica && (precio <= 0 || cont <= 0);
+  const packs = aplica && cont > 0 ? Math.ceil(necesario / cont - 1e-9) : 0;
+  const monto = aplica && !faltaPrecio ? Math.round(packs * precio) : 0;
+  const sobra = packs > 0 ? Math.max(0, packs * cont - necesario) : 0;
+  return {
+    necesario,
+    base: fi.b,
+    cu,
+    packs,
+    monto,
+    sobra,
+    faltaPrecio,
+    aplica
+  };
+}
+// Pasa el kit viejo ({desc, precio} por equipo) al nuevo (cantidad + unidad, y el precio vive en kitCompras / Gastos)
+function migrarKit(items, compras) {
+  items = sinVasos50(items);
+  const comp = compras && typeof compras === "object" ? {
+    ...compras
+  } : {};
+  const out = (Array.isArray(items) ? items : []).map(it => {
+    if (it && it.id && it.unidad) return it;
+    const id = it && it.id || newId();
+    let desc = it && it.desc || "",
+      cantidad = 1,
+      unidad = "u";
+    const m = desc.match(/^\s*(\d+(?:[.,]\d+)?)\s*(?:(kg|g|ml|l)(?=\s))?\s*(\S.*)$/i);
+    if (m) {
+      cantidad = Number(m[1].replace(",", "."));
+      unidad = (m[2] || "u").toLowerCase();
+      desc = m[3].charAt(0).toUpperCase() + m[3].slice(1);
+    }
+    if (!comp[id] && it && it.precio > 0) {
+      comp[id] = {
+        pres: unidad === "u" ? "unidad" : unidad,
+        contenido: 1,
+        unidad,
+        precio: it.precio / cantidad,
+        momento: "antes",
+        pagado: false
+      };
+    }
+    const {
+      precio,
+      ...rest
+    } = it || {};
+    return {
+      ...rest,
+      id,
+      desc,
+      cantidad,
+      unidad
+    };
+  });
+  return {
+    items: out,
+    compras: comp
+  };
+}
 function KitItemRow({
   item,
   onChange,
-  onDelete
+  onDelete,
+  costoEq,
+  faltaPrecio
 }) {
   const fileInputRef = useRef(null);
   async function handleFoto(e) {
@@ -2608,7 +2741,7 @@ function KitItemRow({
       ...item,
       desc: e.target.value
     }),
-    placeholder: "Descripción",
+    placeholder: "Qué lleva cada equipo (ej: Gomitas)",
     className: "torneo-kit-desc",
     style: {
       background: GRIS_CLARO,
@@ -2622,31 +2755,68 @@ function KitItemRow({
       outline: "none",
       fontFamily: FONT
     }
-  }), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    inputMode: "numeric",
-    value: fmtMoneyInput(item.precio),
-    onChange: e => onChange({
-      ...item,
-      precio: parseMoneyInput(e.target.value)
-    }),
-    placeholder: "$ 0",
+  }), /*#__PURE__*/React.createElement("div", {
     className: "torneo-kit-precio",
+    style: {
+      display: "flex",
+      gap: 6,
+      alignItems: "center",
+      flex: "0 0 auto"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    inputMode: "decimal",
+    value: numTxt(item.cantidad),
+    placeholder: "0",
+    onChange: e => {
+      const t = parseDec(e.target.value);
+      if (t !== null) onChange({
+        ...item,
+        cantidad: t
+      });
+    },
     style: {
       background: GRIS_CLARO,
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
-      color: NARANJA,
+      color: BLANCO,
       padding: "8px 6px",
-      flex: "0 0 96px",
-      minWidth: 0,
+      width: 56,
       fontSize: 13.5,
       fontWeight: 700,
       outline: "none",
       fontFamily: FONT,
-      textAlign: "right"
+      textAlign: "center"
     }
-  }), onDelete && /*#__PURE__*/React.createElement(DeleteRowBtn, {
+  }), /*#__PURE__*/React.createElement("select", {
+    value: item.unidad || "u",
+    onChange: e => onChange({
+      ...item,
+      unidad: e.target.value
+    }),
+    style: {
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 6,
+      color: BLANCO,
+      padding: "8px 4px",
+      fontSize: 13,
+      outline: "none",
+      fontFamily: FONT
+    }
+  }, UNID_ITEM.map(u => /*#__PURE__*/React.createElement("option", {
+    key: u,
+    value: u
+  }, UNID_LABEL[u]))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      fontFamily: FONT_MONO,
+      color: faltaPrecio ? NARANJA : CLARO,
+      whiteSpace: "nowrap",
+      minWidth: 70
+    }
+  }, faltaPrecio ? "Falta precio" : costoEq > 0 ? fmt(costoEq) + " c/equipo" : "")), onDelete && /*#__PURE__*/React.createElement(DeleteRowBtn, {
     onClick: onDelete,
     className: "torneo-kit-del"
   }));
@@ -3299,15 +3469,18 @@ const DEFAULTS = {
   manualItems: [{
     desc: "Sonido (Bruno)",
     precio: 75000,
-    obs: "Rango $70.000–$80.000, confirmar precio final"
+    obs: "Rango $70.000–$80.000, confirmar precio final",
+    etiqueta: "Sonido"
   }, {
     desc: "Micrófono inalámbrico",
     precio: 50000,
-    obs: ""
+    obs: "",
+    etiqueta: "Sonido"
   }, {
     desc: "Tuppers e higiene",
     precio: 0,
-    obs: "Responsable: Juancho"
+    obs: "Responsable: Juancho",
+    etiqueta: "Logística"
   }],
   checklistItems: [{
     text: "DJ contratado / equipo de sonido confirmado",
@@ -3360,6 +3533,158 @@ const DEFAULTS = {
     precio: 2000
   }]
 };
+const MK0 = migrarKit(DEFAULTS.kitItems, null);
+function StatTile({
+  label,
+  value,
+  sub,
+  color
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: GRIS_CLARO,
+      border: `1px solid ${BORDE}`,
+      borderRadius: 10,
+      padding: "10px 12px",
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: MUTED,
+      fontSize: 10.5,
+      fontWeight: 700,
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      fontFamily: FONT
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: color || BLANCO,
+      fontSize: 19,
+      fontWeight: 800,
+      fontFamily: FONT_MONO,
+      marginTop: 2,
+      whiteSpace: "nowrap"
+    }
+  }, value), sub && /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: MUTED,
+      fontSize: 11,
+      marginTop: 2,
+      fontFamily: FONT
+    }
+  }, sub));
+}
+function ProgBar({
+  label,
+  value,
+  max,
+  color,
+  texto
+}) {
+  const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: 8,
+      marginBottom: 4,
+      fontFamily: FONT
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: CLARO,
+      fontSize: 12.5
+    }
+  }, label), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: BLANCO,
+      fontSize: 12.5,
+      fontWeight: 700
+    }
+  }, texto || `${value} / ${max}`, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: MUTED,
+      fontWeight: 500
+    }
+  }, "· ", pct, "%"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 8,
+      background: GRIS_CLARO,
+      borderRadius: 4,
+      overflow: "hidden",
+      border: `1px solid ${BORDE}`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: pct + "%",
+      height: "100%",
+      background: color || NARANJA,
+      borderRadius: 4,
+      transition: "width .3s"
+    }
+  })));
+}
+function Donut({
+  datos,
+  total
+}) {
+  const R = 62,
+    C = 2 * Math.PI * R;
+  let off = 0;
+  return /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 160 160",
+    width: "190",
+    height: "190",
+    role: "img",
+    "aria-label": "Gastos por etiqueta",
+    style: {
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "80",
+    cy: "80",
+    r: R,
+    fill: "none",
+    stroke: GRIS_CLARO,
+    strokeWidth: "26"
+  }), total > 0 && datos.map(d => {
+    const len = d.monto / total * C;
+    const el = /*#__PURE__*/React.createElement("circle", {
+      key: d.etiqueta,
+      cx: "80",
+      cy: "80",
+      r: R,
+      fill: "none",
+      stroke: ETQ_COLOR[d.etiqueta] || MUTED,
+      strokeWidth: "26",
+      strokeDasharray: `${Math.max(0, len - (datos.length > 1 ? 1.5 : 0))} ${C - len + (datos.length > 1 ? 1.5 : 0)}`,
+      strokeDashoffset: -off,
+      transform: "rotate(-90 80 80)"
+    });
+    off += len;
+    return el;
+  }), /*#__PURE__*/React.createElement("text", {
+    x: "80",
+    y: "76",
+    textAnchor: "middle",
+    fontSize: "10",
+    fill: MUTED,
+    fontFamily: FONT
+  }, "TOTAL"), /*#__PURE__*/React.createElement("text", {
+    x: "80",
+    y: "94",
+    textAnchor: "middle",
+    fontSize: "15",
+    fontWeight: "800",
+    fill: BLANCO,
+    fontFamily: FONT
+  }, fmt(total)));
+}
 function TorneoPlanner({
   pendientes = {
     n: 0,
@@ -3370,7 +3695,7 @@ function TorneoPlanner({
   const [tab, setTabRaw] = useState(() => {
     try {
       const saved = window.localStorage.getItem("urqui-last-tab");
-      if (["inscripcion", "sorteo", "gastro", "remeras", "sponsors", "gastos", "resumen"].includes(saved)) return saved;
+      if (["inscripcion", "sorteo", "gastro", "remeras", "gastos", "resumen"].includes(saved)) return saved;
     } catch {}
     return "inscripcion";
   });
@@ -3450,7 +3775,14 @@ function TorneoPlanner({
   const [gaseosaBeb1LCant, setGaseosaBeb1LCant] = useState(DEFAULTS.gaseosaBeb1LCant);
   const [aporteSponsor, setAporteSponsor] = useState(DEFAULTS.aporteSponsor);
   const [capitalInicial, setCapitalInicial] = useState(DEFAULTS.capitalInicial);
-  const [kitItems, setKitItems] = useState(DEFAULTS.kitItems);
+  const [kitItems, setKitItems] = useState(MK0.items);
+  const [kitCompras, setKitCompras] = useState(MK0.compras);
+  const [remerasMeta, setRemerasMeta] = useState({
+    momento: "antes",
+    pagado: false
+  });
+  const [dropSobre, setDropSobre] = useState(null);
+  const [tortaModo, setTortaModo] = useState("todo");
   const [manualItems, setManualItems] = useState(DEFAULTS.manualItems);
   const [insumoItems, setInsumoItems] = useState(DEFAULTS.insumoItems);
   const [checklistItems, setChecklistItems] = useState(DEFAULTS.checklistItems);
@@ -3482,7 +3814,7 @@ function TorneoPlanner({
           if (d.totalNumeros !== undefined) setTotalNumeros(d.totalNumeros);
           if (d.cantPremios !== undefined) setCantPremios(d.cantPremios);
           if (d.equipos !== undefined) {
-            setEquipos(d.equipos);
+            setEquipos(Math.min(CUPO, d.equipos));
             setPrecioPorEquipo(d.precioPorEquipo);
           }
           if (d.r7XS !== undefined) {
@@ -3522,7 +3854,12 @@ function TorneoPlanner({
           }
           if (d.aporteSponsor !== undefined) setAporteSponsor(d.aporteSponsor);
           if (d.capitalInicial !== undefined) setCapitalInicial(d.capitalInicial);
-          if (d.kitItems !== undefined) setKitItems(sinVasos50(d.kitItems));
+          if (d.kitItems !== undefined) {
+            const mk = migrarKit(d.kitItems, d.kitCompras);
+            setKitItems(mk.items);
+            setKitCompras(mk.compras);
+          }
+          if (d.remerasMeta !== undefined) setRemerasMeta(d.remerasMeta);
           if (d.manualItems !== undefined) setManualItems(sinVasos50(d.manualItems));
           if (d.insumoItems !== undefined) setInsumoItems(sinVasos50(d.insumoItems));
           if (d.checklistItems !== undefined) setChecklistItems(d.checklistItems);
@@ -3634,10 +3971,12 @@ function TorneoPlanner({
     aporteSponsor,
     capitalInicial,
     kitItems,
+    kitCompras,
+    remerasMeta,
     manualItems,
     insumoItems,
     checklistItems
-  }), [productosVenta, pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, totalNumeros, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, r7EfeTalla, r7TransfTalla, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, rjEfeTalla, rjTransfTalla, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
+  }), [kitCompras, remerasMeta, productosVenta, pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, totalNumeros, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, r7EfeTalla, r7TransfTalla, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, rjEfeTalla, rjTransfTalla, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
   useEffect(() => {
     if (!loaded) return;
     setSaveStatus("saving");
@@ -3689,13 +4028,99 @@ function TorneoPlanner({
   const totalVentaProductos = productosVenta.reduce((a, p) => a + (Number(p.precio) || 0) * (Number(p.cant) || 0), 0);
   const costoInsumosTotal = insumoItems.reduce((a, b) => a + (Number(b.cantidad) || 0) * (Number(b.costo) || 0), 0);
   const totalSponsors = aporteSponsor * 3;
-  const costoKitTotal = kitItems.reduce((a, b) => a + (b.precio || 0), 0) * equipos;
+  const kitCalc = kitItems.map(it => ({
+    it,
+    c: kitCompras[it.id] || {},
+    r: calcCompraKit(it, kitCompras[it.id])
+  }));
+  const costoKitTotal = kitCalc.reduce((a, x) => a + x.r.monto, 0);
+  const kitFaltaPrecio = kitCalc.filter(x => x.r.faltaPrecio).length;
   const costoManualTotal = manualItems.reduce((a, b) => a + (Number(b.precio) || 0), 0);
   const totalInscripcionConKit = totalInscripcion - costoKitTotal;
   const totalIngresos = recaudadoSorteo + totalInscripcion + ventaRemeras7ma + gananciaJuego + totalVentaProductos + totalSponsors;
-  const totalEgresos = costoKitTotal + costoManualTotal + costoInsumosTotal;
+  const costoMerch7ma = costoTotal7ma;
+  const totalEgresos = costoKitTotal + costoManualTotal + costoInsumosTotal + costoMerch7ma;
   const gananciaTotal = totalIngresos - totalEgresos;
   const saldoFinal = capitalInicial + gananciaTotal;
+
+  // ── Todos los gastos en una sola lista (kit + insumos + gastos sueltos + remeras) ──
+  const gastoLineas = [...kitCalc.filter(x => x.r.aplica).map(({
+    it,
+    c,
+    r
+  }) => ({
+    key: "kit:" + it.id,
+    origen: "kit",
+    id: it.id,
+    desc: it.desc || "(sin descripción)",
+    etiqueta: "Kit",
+    monto: r.monto,
+    momento: c.momento || "antes",
+    pagado: !!c.pagado,
+    falta: r.faltaPrecio,
+    detalle: `${numTxt(it.cantidad)} ${UNID_LABEL[it.unidad || "u"]} por equipo · se define en Inscripción`
+  })), ...insumoItems.map((it, i) => ({
+    key: "ins:" + i,
+    origen: "ins",
+    idx: i,
+    desc: it.desc || "(sin descripción)",
+    etiqueta: etqInsumo(it),
+    monto: (Number(it.cantidad) || 0) * (Number(it.costo) || 0),
+    momento: it.momento || "antes",
+    pagado: !!it.comprado,
+    falta: (Number(it.cantidad) || 0) > 0 && !(Number(it.costo) > 0),
+    detalle: `${it.cantidad} × ${fmt(Number(it.costo) || 0)} · se edita en Gastronomía`,
+    visible: (Number(it.cantidad) || 0) > 0 || (Number(it.costo) || 0) > 0
+  })).filter(l => l.visible), ...manualItems.map((it, i) => ({
+    key: "man:" + i,
+    origen: "man",
+    idx: i,
+    desc: it.desc,
+    etiqueta: etqManual(it),
+    monto: Number(it.precio) || 0,
+    momento: it.momento || "antes",
+    pagado: !!it.pagado,
+    falta: !(Number(it.precio) > 0),
+    detalle: ""
+  })), ...(total7ma > 0 ? [{
+    key: "merch",
+    origen: "merch",
+    desc: "Remeras 7ma",
+    etiqueta: "Merch",
+    monto: costoMerch7ma,
+    momento: remerasMeta.momento || "antes",
+    pagado: !!remerasMeta.pagado,
+    falta: false,
+    detalle: `${total7ma} × ${fmt(costoRemera7ma)} · cantidad en la pestaña Remeras`
+  }] : [])];
+  const gastoFaltantes = gastoLineas.filter(l => l.falta);
+  const gastoPagado = gastoLineas.filter(l => l.pagado).reduce((a, l) => a + l.monto, 0);
+  function patchLinea(l, p) {
+    if (l.origen === "kit") setKitCompras(prev => ({
+      ...prev,
+      [l.id]: {
+        ...(prev[l.id] || {}),
+        ...p
+      }
+    }));else if (l.origen === "ins") setInsumoItems(prev => prev.map((x, i) => i !== l.idx ? x : {
+      ...x,
+      ...("pagado" in p ? {
+        comprado: p.pagado
+      } : {}),
+      ...("momento" in p ? {
+        momento: p.momento
+      } : {}),
+      ...("etiqueta" in p ? {
+        etiqueta: p.etiqueta
+      } : {})
+    }));else if (l.origen === "man") setManualItems(prev => prev.map((x, i) => i !== l.idx ? x : {
+      ...x,
+      ...p
+    }));else if (l.origen === "merch") setRemerasMeta(prev => ({
+      ...prev,
+      ...p
+    }));
+  }
   const saveLabel = soloLectura ? "" : saveStatus === "saving" ? "💾 Guardando..." : saveStatus === "saved" ? "✓ Guardado" : saveStatus === "error" ? "⚠ Error al guardar" : "";
   const fileInputExcelRef = useRef(null);
   const [accionandoCodigo, setAccionandoCodigo] = useState(null);
@@ -4123,17 +4548,23 @@ function TorneoPlanner({
       lineas.push("-".repeat(DESC_W + DET_W + NUM_W));
       lineas.push(padR("Subtotal insumos", DESC_W + DET_W) + padL(fmt(subtotalInsumos), NUM_W));
     }
-    if (kitItems.length > 0) {
-      const subtotalKit = kitItems.reduce((a, i) => a + (i.precio || 0), 0) * equipos;
+    const kitPend = kitCalc.filter(x => x.r.aplica && x.r.monto > 0 && !x.c.pagado);
+    const subtotalKit = kitPend.reduce((a, x) => a + x.r.monto, 0);
+    if (kitPend.length > 0) {
       lineas.push("");
-      lineas.push(`KIT POR EQUIPO (x ${equipos} equipos)`);
-      kitItems.forEach(item => {
-        lineas.push(linea(item.desc || "(sin descripción)", `${fmt(item.precio)} x ${equipos}`, item.precio * equipos));
+      lineas.push(`COMPRAS DEL KIT (para ${CUPO} equipos)`);
+      kitPend.forEach(({
+        it,
+        c,
+        r
+      }) => {
+        lineas.push(linea(it.desc || "(sin descripción)", `${r.packs} x ${fmt(Number(c.precio) || 0)}`, r.monto));
+        lineas.push(`  (${c.pres || "unidad"} de ${c.contenido} ${UNID_LABEL[r.cu]}; necesitás ${fmtCantBase(r.necesario, r.base)})`);
       });
       lineas.push("-".repeat(DESC_W + DET_W + NUM_W));
-      lineas.push(padR("Subtotal kit por equipo", DESC_W + DET_W) + padL(fmt(subtotalKit), NUM_W));
+      lineas.push(padR("Subtotal kit", DESC_W + DET_W) + padL(fmt(subtotalKit), NUM_W));
     }
-    const totalGeneral = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0) + costoKitTotal;
+    const totalGeneral = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0) + subtotalKit;
     lineas.push("");
     lineas.push("=".repeat(DESC_W + DET_W + NUM_W));
     lineas.push(padR("TOTAL A COMPRAR", DESC_W + DET_W) + padL(fmt(totalGeneral), NUM_W));
@@ -4499,9 +4930,6 @@ function TorneoPlanner({
   }, {
     key: "remeras",
     label: "👕 Remeras"
-  }, {
-    key: "sponsors",
-    label: "🤝 Sponsors"
   }, {
     key: "gastos",
     label: "💸 Gastos"
@@ -5105,18 +5533,24 @@ function TorneoPlanner({
       gap: 10
     }
   }, /*#__PURE__*/React.createElement(NumInput, {
-    label: "Equipos inscriptos",
+    label: `Equipos inscriptos hasta hoy (máx. ${CUPO})`,
     value: equipos,
-    onChange: setEquipos,
-    suffix: "equipos"
+    onChange: v => setEquipos(Math.min(CUPO, v)),
+    suffix: `de ${CUPO}`
   }), /*#__PURE__*/React.createElement(NumInput, {
     label: "Precio por equipo",
     value: precioPorEquipo,
     onChange: setPrecioPorEquipo,
     money: true
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(ProgBar, {
+    label: "Cupo del torneo",
+    value: equipos,
+    max: CUPO,
+    color: equipos >= CUPO ? VERDE : NARANJA,
+    texto: equipos >= CUPO ? "Cupo completo" : `${equipos} de ${CUPO} · faltan ${CUPO - equipos}`
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
-      margin: "18px 0 10px",
+      margin: "18px 0 6px",
       color: BLANCO,
       fontSize: 12.5,
       fontWeight: 700,
@@ -5129,19 +5563,36 @@ function TorneoPlanner({
       margin: "0 0 12px",
       fontFamily: FONT
     }
-  }, "Costo por equipo de cada ítem — se multiplica por la cantidad de equipos."), kitItems.map((item, i) => /*#__PURE__*/React.createElement(KitItemRow, {
-    key: i,
+  }, "Qué recibe cada equipo (cantidad y unidad). El precio no se carga acá: se completa en ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: CLARO
+    }
+  }, "Gastos"), " según cómo lo conseguís, y el costo por equipo se calcula solo (se compra para ", CUPO, " equipos)."), kitItems.map((item, i) => /*#__PURE__*/React.createElement(KitItemRow, {
+    key: item.id || i,
     item: item,
+    costoEq: kitCalc[i] ? kitCalc[i].r.monto / CUPO : 0,
+    faltaPrecio: kitCalc[i] ? kitCalc[i].r.faltaPrecio : false,
     onChange: next => {
       const n = [...kitItems];
       n[i] = next;
       setKitItems(n);
     },
-    onDelete: kitItems.length > 1 ? () => setKitItems(kitItems.filter((_, j) => j !== i)) : null
+    onDelete: kitItems.length > 1 ? () => {
+      setKitCompras(prev => {
+        const n = {
+          ...prev
+        };
+        delete n[item.id];
+        return n;
+      });
+      setKitItems(kitItems.filter((_, j) => j !== i));
+    } : null
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setKitItems([...kitItems, {
+      id: newId(),
       desc: "",
-      precio: 0
+      cantidad: 1,
+      unidad: "u"
     }]),
     className: "torneo-edit-only",
     style: {
@@ -5156,7 +5607,41 @@ function TorneoPlanner({
       fontFamily: FONT,
       marginBottom: 10
     }
-  }, "+ Agregar ítem"), /*#__PURE__*/React.createElement("div", {
+  }, "+ Agregar ítem"), kitFaltaPrecio > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: `${NARANJA}14`,
+      border: `1px solid ${NARANJA}66`,
+      borderRadius: 8,
+      padding: "9px 12px",
+      marginBottom: 10,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+      flexWrap: "wrap",
+      fontFamily: FONT
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: NARANJA,
+      fontSize: 12.5,
+      fontWeight: 700
+    }
+  }, "⚠ Falta precio en ", kitFaltaPrecio, " ", kitFaltaPrecio === 1 ? "ítem" : "ítems", " del kit"), /*#__PURE__*/React.createElement("button", {
+    "data-ro-ok": "1",
+    onClick: () => setTab("gastos"),
+    style: {
+      background: "transparent",
+      border: `1px solid ${NARANJA}`,
+      color: NARANJA,
+      borderRadius: 6,
+      padding: "5px 10px",
+      fontSize: 12,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: FONT
+    }
+  }, "Cargar en Gastos →")), /*#__PURE__*/React.createElement("div", {
     style: {
       background: GRIS_CLARO,
       borderRadius: 7,
@@ -5171,24 +5656,32 @@ function TorneoPlanner({
       margin: "0 0 4px",
       fontFamily: FONT
     }
-  }, "Kit por equipo:"), kitItems.map((item, i) => /*#__PURE__*/React.createElement(Row, {
-    key: i,
-    label: item.desc || `Ítem ${i + 1}`,
-    value: `${fmt(item.precio)} × ${equipos} = ${fmt(item.precio * equipos)}`,
+  }, "Kit por equipo (según lo cargado en Gastos):"), kitCalc.map(({
+    it,
+    r
+  }, i) => /*#__PURE__*/React.createElement(Row, {
+    key: it.id || i,
+    label: `${it.desc || `Ítem ${i + 1}`} (${numTxt(it.cantidad)} ${UNID_LABEL[it.unidad || "u"]})`,
+    value: r.faltaPrecio ? "falta precio" : `${fmt(r.monto / CUPO)} × ${CUPO} = ${fmt(r.monto)}`,
+    color: r.faltaPrecio ? NARANJA : undefined,
     sub: true
   })), /*#__PURE__*/React.createElement(Row, {
-    label: "Subtotal kit por equipo",
-    value: fmt(kitItems.reduce((a, b) => a + (b.precio || 0), 0)),
+    label: "Costo por equipo",
+    value: fmt(costoKitTotal / CUPO),
     color: CLARO
   }), /*#__PURE__*/React.createElement(Row, {
-    label: `Costo kit total (× ${equipos} equipos)`,
+    label: `Costo kit total (compra para ${CUPO} equipos)`,
     value: `− ${fmt(costoKitTotal)}`,
     color: ROJO,
     bold: true
   }), /*#__PURE__*/React.createElement(Row, {
-    label: "Neto inscripción",
+    label: `Neto inscripción hoy (${equipos} equipos)`,
     value: fmt(totalInscripcionConKit),
     bold: true,
+    color: totalInscripcionConKit >= 0 ? VERDE : ROJO
+  }), /*#__PURE__*/React.createElement(Row, {
+    label: `Neto proyectado (${CUPO} equipos)`,
+    value: fmt(CUPO * precioPorEquipo - costoKitTotal),
     color: VERDE
   }))), tab === "remeras" && /*#__PURE__*/React.createElement(Card, {
     title: "Remeras",
@@ -5877,333 +6370,712 @@ function TorneoPlanner({
       lineHeight: 1.5,
       fontFamily: FONT
     }
-  }, item))))), tab === "gastos" && /*#__PURE__*/React.createElement(Card, {
-    title: "Gastos varios",
-    accent: true
-  }, /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: MUTED,
-      fontSize: 12.5,
-      marginTop: 0,
-      marginBottom: 12,
-      fontFamily: FONT
-    }
-  }, "Cualquier gasto suelto que no entre en las otras pestañas (arreglos, imprevistos, compras de último momento, etc.). Se suman como egreso en el Resumen general."), manualItems.map((item, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "torneo-gasto-row",
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 6,
-      marginBottom: 6,
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    placeholder: "Descripción",
-    value: item.desc,
-    onChange: e => {
-      const n = [...manualItems];
-      n[i] = {
-        ...n[i],
-        desc: e.target.value
-      };
-      setManualItems(n);
-    },
-    className: "torneo-gasto-desc",
-    style: {
-      background: GRIS_CLARO,
+  }, item))))), tab === "gastos" && (() => {
+    const selStyle = {
+      background: GRIS,
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
       color: BLANCO,
-      padding: "7px 10px",
-      flex: "3 1 160px",
-      minWidth: 0,
-      fontSize: 12.5,
+      padding: "6px 4px",
+      fontSize: 12,
       outline: "none",
       fontFamily: FONT
-    }
-  }), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    inputMode: "numeric",
-    placeholder: "$ 0",
-    value: fmtMoneyInput(item.precio),
-    onChange: e => {
-      const n = [...manualItems];
-      n[i] = {
-        ...n[i],
-        precio: parseMoneyInput(e.target.value)
-      };
-      setManualItems(n);
-    },
-    className: "torneo-gasto-precio",
-    style: {
-      background: GRIS_CLARO,
+    };
+    const inpStyle = {
+      background: GRIS,
       border: `1px solid ${BORDE}`,
       borderRadius: 6,
-      color: NARANJA,
-      padding: "7px 6px",
-      flex: "1 1 70px",
-      minWidth: 0,
-      fontSize: 12.5,
-      fontWeight: 700,
-      outline: "none",
-      fontFamily: FONT,
-      textAlign: "right"
-    }
-  }), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    placeholder: "Observación (opcional)",
-    value: item.obs || "",
-    onChange: e => {
-      const n = [...manualItems];
-      n[i] = {
-        ...n[i],
-        obs: e.target.value
-      };
-      setManualItems(n);
-    },
-    className: "torneo-gasto-obs",
-    style: {
-      background: GRIS_CLARO,
-      border: `1px solid ${BORDE}`,
-      borderRadius: 6,
-      color: MUTED,
-      padding: "7px 10px",
-      flex: "2 1 140px",
-      minWidth: 0,
+      color: BLANCO,
+      padding: "6px 8px",
       fontSize: 12.5,
       outline: "none",
-      fontFamily: FONT
-    }
-  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
-    onClick: () => setManualItems(manualItems.filter((_, j) => j !== i)),
-    size: 16,
-    className: "torneo-gasto-del"
-  }))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setManualItems([...manualItems, {
-      desc: "",
-      precio: 0,
-      obs: ""
-    }]),
-    className: "torneo-edit-only",
-    style: {
-      background: "none",
-      border: `1px dashed ${BORDE}`,
-      borderRadius: 6,
-      color: CLARO,
-      padding: "7px 14px",
-      fontSize: 12.5,
-      cursor: "pointer",
       fontFamily: FONT,
-      marginBottom: 10
-    }
-  }, "+ Agregar gasto"), manualItems.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: MUTED,
-      fontSize: 12.5,
-      fontFamily: FONT,
-      padding: "10px 0"
-    }
-  }, "Todavía no cargaste ningún gasto suelto."), manualItems.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `${ROJO}14`,
-      border: `1px solid ${ROJO}44`,
-      borderRadius: 8,
-      padding: 12,
-      marginTop: 6
-    }
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Subtotal gastos varios",
-    value: fmt(costoManualTotal),
-    bold: true,
-    color: ROJO
-  }))), tab === "resumen" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Card, {
-    title: "📥 Ingresos",
-    accent: true
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Sorteo (talonario)",
-    value: fmt(recaudadoSorteo)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Inscripción al torneo",
-    value: fmt(totalInscripcion)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Venta remeras 7ma",
-    value: fmt(ventaRemeras7ma)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Venta remeras de juego",
-    value: fmt(gananciaJuego)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Venta gastronomía (lo que vendemos)",
-    value: fmt(totalVentaProductos)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Aporte sponsors",
-    value: fmt(totalSponsors)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "TOTAL INGRESOS",
-    value: fmt(totalIngresos),
-    bold: true,
-    color: VERDE
-  })), /*#__PURE__*/React.createElement(Card, {
-    title: "📤 Egresos"
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Kit por equipo",
-    value: fmt(costoKitTotal),
-    color: ROJO
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Insumos de gastronomía (fernet, coca, carbón, hielo, etc.)",
-    value: fmt(costoInsumosTotal),
-    color: ROJO
-  }), manualItems.length > 0 && /*#__PURE__*/React.createElement(Row, {
-    label: "Pestaña GASTOS",
-    value: fmt(costoManualTotal),
-    color: ROJO
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "TOTAL EGRESOS",
-    value: fmt(totalEgresos),
-    bold: true,
-    color: ROJO
-  })), /*#__PURE__*/React.createElement(Card, {
-    title: "💰 Balance Final"
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Capital Inicial",
-    value: fmt(capitalInicial)
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Total Ingresos",
-    value: fmt(totalIngresos),
-    color: VERDE
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "Total Egresos",
-    value: fmt(totalEgresos),
-    color: ROJO
-  }), /*#__PURE__*/React.createElement(Row, {
-    label: "SALDO FINAL",
-    value: fmt(saldoFinal),
-    bold: true,
-    color: saldoFinal >= capitalInicial ? VERDE : ROJO
-  })), /*#__PURE__*/React.createElement(Card, {
-    title: "⚙️ Checklist del día"
-  }, checklistItems.map((item, i) => editingChecklistIdx === i ? /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: "flex",
-      gap: 8,
-      padding: "9px 0",
-      borderBottom: `1px solid ${GRIS_CLARO}`,
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    autoFocus: true,
-    value: editChecklistText,
-    onChange: e => setEditChecklistText(e.target.value),
-    onKeyDown: e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (editChecklistText.trim()) {
-          const n = [...checklistItems];
-          n[i] = {
-            ...n[i],
-            text: editChecklistText.trim()
-          };
-          setChecklistItems(n);
+      minWidth: 0
+    };
+    function renderLinea(l) {
+      const kit = l.origen === "kit" ? kitCalc.find(x => x.it.id === l.id) : null;
+      const man = l.origen === "man" ? manualItems[l.idx] : null;
+      const col = ETQ_COLOR[l.etiqueta] || MUTED;
+      const otro = l.momento === "antes" ? "despues" : "antes";
+      return /*#__PURE__*/React.createElement("div", {
+        key: l.key,
+        style: {
+          background: l.pagado ? `${VERDE}14` : GRIS_CLARO,
+          border: `1px solid ${l.pagado ? VERDE + "66" : l.falta ? NARANJA + "99" : BORDE}`,
+          borderLeft: `4px solid ${col}`,
+          borderRadius: 8,
+          padding: "8px 10px",
+          marginBottom: 6
         }
-        setEditingChecklistIdx(null);
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap"
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        draggable: true,
+        className: "torneo-edit-only",
+        title: "Arrastrá para pasarlo al otro bloque",
+        onDragStart: e => {
+          e.dataTransfer.setData("text/plain", l.key);
+          e.dataTransfer.effectAllowed = "move";
+          try {
+            e.dataTransfer.setDragImage(e.currentTarget.parentElement.parentElement, 20, 20);
+          } catch {}
+        },
+        style: {
+          cursor: "grab",
+          color: MUTED,
+          fontSize: 17,
+          userSelect: "none",
+          lineHeight: 1,
+          padding: "0 2px"
+        }
+      }, "⠿"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => patchLinea(l, {
+          pagado: !l.pagado
+        }),
+        title: l.pagado ? "Marcar como pendiente" : "Marcar como pagado",
+        className: "torneo-edit-only-pointer",
+        style: {
+          width: 22,
+          height: 22,
+          borderRadius: 6,
+          border: `1px solid ${l.pagado ? VERDE : MUTED}`,
+          background: l.pagado ? VERDE : "transparent",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          padding: 0,
+          flexShrink: 0
+        }
+      }, l.pagado && /*#__PURE__*/React.createElement(Check, {
+        size: 15,
+        color: NEGRO
+      })), /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: "1 1 150px",
+          minWidth: 0
+        }
+      }, man ? /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        placeholder: "Descripción del gasto",
+        value: man.desc || "",
+        onChange: e => patchLinea(l, {
+          desc: e.target.value
+        }),
+        style: {
+          ...inpStyle,
+          width: "100%",
+          fontSize: 13.5,
+          fontWeight: 700
+        }
+      }) : /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: l.pagado ? CLARO : BLANCO,
+          fontWeight: 700,
+          fontSize: 13.5,
+          fontFamily: FONT,
+          textDecoration: l.pagado ? "line-through" : "none",
+          overflowWrap: "anywhere"
+        }
+      }, l.desc), l.detalle && /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: MUTED,
+          fontSize: 11,
+          fontFamily: FONT,
+          marginTop: 1
+        }
+      }, l.detalle)), man || l.origen === "ins" ? /*#__PURE__*/React.createElement("select", {
+        value: l.etiqueta,
+        onChange: e => patchLinea(l, {
+          etiqueta: e.target.value
+        }),
+        style: {
+          ...selStyle,
+          color: col,
+          fontWeight: 700
+        }
+      }, ETIQUETAS.map(e => /*#__PURE__*/React.createElement("option", {
+        key: e,
+        value: e
+      }, e))) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: col,
+          border: `1px solid ${col}66`,
+          borderRadius: 6,
+          padding: "3px 8px",
+          fontSize: 11.5,
+          fontWeight: 700,
+          fontFamily: FONT
+        }
+      }, l.etiqueta), man ? /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        inputMode: "numeric",
+        placeholder: "$ 0",
+        value: fmtMoneyInput(man.precio),
+        onChange: e => patchLinea(l, {
+          precio: parseMoneyInput(e.target.value)
+        }),
+        style: {
+          ...inpStyle,
+          width: 100,
+          textAlign: "right",
+          color: NARANJA,
+          fontWeight: 700
+        }
+      }) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          minWidth: 86,
+          textAlign: "right",
+          fontFamily: FONT_MONO,
+          fontWeight: 800,
+          fontSize: 13.5,
+          color: l.falta ? NARANJA : l.pagado ? VERDE : ROJO
+        }
+      }, l.falta ? "Falta precio" : fmt(l.monto)), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => patchLinea(l, {
+          momento: otro
+        }),
+        className: "torneo-edit-only-pointer",
+        title: otro === "despues" ? "Pasar a después del torneo" : "Pasar a antes del torneo",
+        style: {
+          background: "transparent",
+          border: `1px solid ${BORDE}`,
+          color: CLARO,
+          borderRadius: 6,
+          padding: "4px 8px",
+          fontSize: 11.5,
+          cursor: "pointer",
+          fontFamily: FONT,
+          whiteSpace: "nowrap"
+        }
+      }, otro === "despues" ? "Después ↓" : "↑ Antes"), man && /*#__PURE__*/React.createElement(DeleteRowBtn, {
+        onClick: () => setManualItems(manualItems.filter((_, j) => j !== l.idx)),
+        size: 15
+      })), man && /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        placeholder: "Observación (opcional)",
+        value: man.obs || "",
+        onChange: e => patchLinea(l, {
+          obs: e.target.value
+        }),
+        style: {
+          ...inpStyle,
+          width: "100%",
+          marginTop: 6,
+          color: MUTED,
+          fontSize: 12
+        }
+      }), kit && /*#__PURE__*/React.createElement("div", {
+        style: {
+          marginTop: 8,
+          paddingTop: 8,
+          borderTop: `1px dashed ${BORDE}`
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: CLARO,
+          fontSize: 12,
+          fontFamily: FONT,
+          marginBottom: 6
+        }
+      }, "Necesitás ", /*#__PURE__*/React.createElement("b", {
+        style: {
+          color: BLANCO
+        }
+      }, fmtCantBase(kit.r.necesario, kit.r.base)), " (", numTxt(kit.it.cantidad), " ", UNID_LABEL[kit.it.unidad || "u"], " × ", CUPO, " equipos). ¿Cómo lo conseguís?"), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          alignItems: "center"
+        }
+      }, /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        placeholder: "Presentación (bolsa, caja, kg…)",
+        value: kit.c.pres || "",
+        onChange: e => patchLinea(l, {
+          pres: e.target.value
+        }),
+        style: {
+          ...inpStyle,
+          flex: "1 1 130px"
+        }
+      }), /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: MUTED,
+          fontSize: 12
+        }
+      }, "de"), /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        inputMode: "decimal",
+        placeholder: "Cant.",
+        value: numTxt(kit.c.contenido),
+        onChange: e => {
+          const t = parseDec(e.target.value);
+          if (t !== null) patchLinea(l, {
+            contenido: t
+          });
+        },
+        style: {
+          ...inpStyle,
+          width: 64,
+          textAlign: "center"
+        }
+      }), /*#__PURE__*/React.createElement("select", {
+        value: kit.r.cu,
+        onChange: e => patchLinea(l, {
+          unidad: e.target.value
+        }),
+        style: selStyle
+      }, compatibles(kit.it.unidad || "u").map(u => /*#__PURE__*/React.createElement("option", {
+        key: u,
+        value: u
+      }, UNID_LABEL[u]))), /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: MUTED,
+          fontSize: 12
+        }
+      }, "a"), /*#__PURE__*/React.createElement("input", {
+        type: "text",
+        inputMode: "numeric",
+        placeholder: "$ precio c/u",
+        value: fmtMoneyInput(Number(kit.c.precio) || 0),
+        onChange: e => patchLinea(l, {
+          precio: parseMoneyInput(e.target.value)
+        }),
+        style: {
+          ...inpStyle,
+          width: 104,
+          textAlign: "right",
+          color: NARANJA,
+          fontWeight: 700
+        }
+      })), !kit.r.faltaPrecio && /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: CLARO,
+          fontSize: 12,
+          fontFamily: FONT,
+          marginTop: 6
+        }
+      }, "Comprar ", /*#__PURE__*/React.createElement("b", {
+        style: {
+          color: BLANCO
+        }
+      }, kit.r.packs), " × ", kit.c.pres || "unidad", " = ", /*#__PURE__*/React.createElement("b", {
+        style: {
+          color: ROJO
+        }
+      }, fmt(kit.r.monto)), kit.r.sobra > 0 && /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: MUTED
+        }
+      }, " · sobra ", fmtCantBase(kit.r.sobra, kit.r.base)))));
+    }
+    const bloques = [{
+      id: "antes",
+      titulo: "🗓 Antes del torneo",
+      ayuda: "Lo que hay que pagar antes del 7 de noviembre"
+    }, {
+      id: "despues",
+      titulo: "🏁 Después del torneo",
+      ayuda: "Lo que se paga una vez terminado"
+    }];
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Card, {
+      title: "Gastos",
+      accent: true
+    }, /*#__PURE__*/React.createElement("p", {
+      style: {
+        color: MUTED,
+        fontSize: 12.5,
+        marginTop: 0,
+        marginBottom: 12,
+        fontFamily: FONT
       }
-      if (e.key === "Escape") setEditingChecklistIdx(null);
-    },
-    style: {
-      flex: 1,
-      background: GRIS_CLARO,
-      border: `1px solid ${NARANJA}`,
-      borderRadius: 6,
-      color: BLANCO,
-      padding: "6px 9px",
-      fontSize: 12.5,
-      outline: "none",
-      fontFamily: FONT
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (editChecklistText.trim()) {
-        const n = [...checklistItems];
-        n[i] = {
-          ...n[i],
-          text: editChecklistText.trim()
-        };
-        setChecklistItems(n);
+    }, "Todo lo que se paga, en un solo lugar: compras del kit, insumos de gastronomía, remeras y gastos sueltos. Tildá ✓ cuando esté pago, y arrastrá ⠿ (o usá el botón) para pasarlo de antes a después."), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+        gap: 8
       }
-      setEditingChecklistIdx(null);
-    },
-    style: {
-      background: NARANJA,
-      border: "none",
-      borderRadius: 6,
-      width: 26,
-      height: 26,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement(Check, {
-    size: 13,
-    color: NEGRO
-  }))) : /*#__PURE__*/React.createElement("div", {
-    key: i,
-    onClick: () => {
-      const n = [...checklistItems];
-      n[i] = {
-        ...n[i],
-        checked: !n[i].checked
-      };
-      setChecklistItems(n);
-    },
-    style: {
-      display: "flex",
-      gap: 8,
-      padding: "9px 0",
-      borderBottom: `1px solid ${GRIS_CLARO}`,
-      fontSize: 12.5,
-      color: item.checked ? MUTED : CLARO,
-      alignItems: "center",
-      fontFamily: FONT,
-      cursor: "pointer",
-      textDecoration: item.checked ? "line-through" : "none"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: item.checked ? VERDE : NARANJA,
-      fontSize: 14,
-      flexShrink: 0
-    }
-  }, item.checked ? "☑" : "☐"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      flex: 1
-    }
-  }, item.text), /*#__PURE__*/React.createElement(IconBtn, {
-    icon: Pencil,
-    onClick: e => {
-      e.stopPropagation();
-      setEditingChecklistIdx(i);
-      setEditChecklistText(item.text);
-    },
-    color: CLARO,
-    size: 12,
-    title: "Editar",
-    className: "torneo-edit-only"
-  }), /*#__PURE__*/React.createElement(DeleteRowBtn, {
-    onClick: e => {
-      e.stopPropagation();
-      setChecklistItems(checklistItems.filter((_, j) => j !== i));
-    },
-    size: 13
-  }))), /*#__PURE__*/React.createElement(NewChecklistInput, {
-    onAdd: text => setChecklistItems([...checklistItems, {
-      text,
-      checked: false
-    }])
-  })))), modalPremiosAbierto && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(StatTile, {
+      label: "Total a gastar",
+      value: fmt(totalEgresos),
+      color: ROJO
+    }), /*#__PURE__*/React.createElement(StatTile, {
+      label: "Ya pagado",
+      value: fmt(gastoPagado),
+      color: VERDE
+    }), /*#__PURE__*/React.createElement(StatTile, {
+      label: "Falta pagar",
+      value: fmt(totalEgresos - gastoPagado),
+      color: NARANJA
+    })), gastoFaltantes.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: `${NARANJA}14`,
+        border: `1px solid ${NARANJA}66`,
+        borderRadius: 8,
+        padding: "9px 12px",
+        marginTop: 10,
+        fontFamily: FONT
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: NARANJA,
+        fontSize: 12.5,
+        fontWeight: 700
+      }
+    }, "⚠ Falta precio en ", gastoFaltantes.length, " ", gastoFaltantes.length === 1 ? "ítem" : "ítems"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: CLARO,
+        fontSize: 11.5,
+        marginTop: 2
+      }
+    }, gastoFaltantes.map(l => l.desc || "(sin descripción)").join(" · ")))), bloques.map(bl => {
+      const ls = gastoLineas.filter(l => l.momento === bl.id);
+      const tot = ls.reduce((a, l) => a + l.monto, 0);
+      const pag = ls.filter(l => l.pagado).reduce((a, l) => a + l.monto, 0);
+      return /*#__PURE__*/React.createElement("div", {
+        key: bl.id,
+        onDragOver: e => {
+          e.preventDefault();
+          if (dropSobre !== bl.id) setDropSobre(bl.id);
+        },
+        onDragLeave: e => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setDropSobre(null);
+        },
+        onDrop: e => {
+          e.preventDefault();
+          const k = e.dataTransfer.getData("text/plain");
+          const l = gastoLineas.find(x => x.key === k);
+          if (l && l.momento !== bl.id) patchLinea(l, {
+            momento: bl.id
+          });
+          setDropSobre(null);
+        },
+        style: {
+          borderRadius: 14,
+          outline: dropSobre === bl.id ? `2px dashed ${NARANJA}` : "2px dashed transparent",
+          outlineOffset: 2
+        }
+      }, /*#__PURE__*/React.createElement(Card, {
+        title: bl.titulo
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: MUTED,
+          fontSize: 12,
+          marginTop: -6,
+          marginBottom: 8,
+          fontFamily: FONT
+        }
+      }, bl.ayuda), /*#__PURE__*/React.createElement(ProgBar, {
+        label: `Pagado ${fmt(pag)} de ${fmt(tot)}`,
+        value: pag,
+        max: tot,
+        color: VERDE,
+        texto: `falta ${fmt(tot - pag)}`
+      }), ls.length === 0 && /*#__PURE__*/React.createElement("div", {
+        style: {
+          color: MUTED,
+          fontSize: 12.5,
+          fontFamily: FONT,
+          padding: "8px 0"
+        }
+      }, "Nada acá todavía. Arrastrá un gasto o agregá uno nuevo."), ls.map(renderLinea), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setManualItems([...manualItems, {
+          id: newId(),
+          desc: "",
+          precio: 0,
+          obs: "",
+          etiqueta: "Otros",
+          momento: bl.id,
+          pagado: false
+        }]),
+        className: "torneo-edit-only",
+        style: {
+          background: "none",
+          border: `1px dashed ${BORDE}`,
+          borderRadius: 6,
+          color: CLARO,
+          padding: "7px 14px",
+          fontSize: 12.5,
+          cursor: "pointer",
+          fontFamily: FONT,
+          marginTop: 4
+        }
+      }, "+ Agregar gasto")));
+    }));
+  })(), tab === "resumen" && (() => {
+    const otrosIngresos = totalIngresos - totalInscripcion;
+    const ingresosProy = otrosIngresos + CUPO * precioPorEquipo;
+    const saldoProy = capitalInicial + ingresosProy - totalEgresos;
+    const faltaPagar = totalEgresos - gastoPagado;
+    const pendAntes = gastoLineas.filter(l => l.momento === "antes" && !l.pagado).reduce((a, l) => a + l.monto, 0);
+    const base = gastoLineas.filter(l => tortaModo === "todo" || l.pagado);
+    const datos = ETIQUETAS.map(e => ({
+      etiqueta: e,
+      monto: base.filter(l => l.etiqueta === e).reduce((a, l) => a + l.monto, 0)
+    })).filter(d => d.monto > 0).sort((a, b) => b.monto - a.monto);
+    const totTorta = datos.reduce((a, d) => a + d.monto, 0);
+    const necesarioEq = totalEgresos - otrosIngresos;
+    const equiposEq = precioPorEquipo > 0 ? Math.ceil(necesarioEq / precioPorEquipo) : 0;
+    const numerosVendidos = pack1Num * pack1Vendidos + pack2Num * pack2Vendidos + pack3Num * pack3Vendidos;
+    const ingresos = [{
+      l: "Inscripción (hoy)",
+      v: totalInscripcion
+    }, {
+      l: "Sorteo",
+      v: recaudadoSorteo
+    }, {
+      l: "Remeras 7ma",
+      v: ventaRemeras7ma
+    }, {
+      l: "Remeras de juego",
+      v: gananciaJuego
+    }, {
+      l: "Gastronomía (venta)",
+      v: totalVentaProductos
+    }, ...(totalSponsors > 0 ? [{
+      l: "Aportes",
+      v: totalSponsors
+    }] : [])];
+    const maxIng = Math.max(1, ...ingresos.map(x => x.v));
+    return /*#__PURE__*/React.createElement(React.Fragment, null, (kitFaltaPrecio > 0 || gastoFaltantes.length > 0 || pendAntes > 0 || equipos < CUPO) && /*#__PURE__*/React.createElement(Card, {
+      title: "⚠ Para tener en cuenta"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        fontFamily: FONT,
+        fontSize: 13
+      }
+    }, gastoFaltantes.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: NARANJA
+      }
+    }, "Falta precio en ", gastoFaltantes.length, " ", gastoFaltantes.length === 1 ? "ítem" : "ítems", " de gastos"), pendAntes > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: CLARO
+      }
+    }, "Pendiente de pago antes del torneo: ", /*#__PURE__*/React.createElement("b", {
+      style: {
+        color: BLANCO
+      }
+    }, fmt(pendAntes))), equipos < CUPO && /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: CLARO
+      }
+    }, "Faltan ", /*#__PURE__*/React.createElement("b", {
+      style: {
+        color: BLANCO
+      }
+    }, CUPO - equipos), " equipos para completar el cupo"))), /*#__PURE__*/React.createElement(Card, {
+      title: "💰 Plata",
+      accent: true
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement(StatTile, {
+      label: "Saldo hoy",
+      value: fmt(saldoFinal),
+      color: saldoFinal >= capitalInicial ? VERDE : ROJO,
+      sub: `con ${equipos} equipos inscriptos`
+    }), /*#__PURE__*/React.createElement(StatTile, {
+      label: `Saldo con ${CUPO} equipos`,
+      value: fmt(saldoProy),
+      color: saldoProy >= capitalInicial ? VERDE : ROJO,
+      sub: "si se completa el cupo"
+    }), /*#__PURE__*/React.createElement(StatTile, {
+      label: "Total a gastar",
+      value: fmt(totalEgresos),
+      color: ROJO,
+      sub: `pagado ${fmt(gastoPagado)}`
+    }), /*#__PURE__*/React.createElement(StatTile, {
+      label: "Falta pagar",
+      value: fmt(faltaPagar),
+      color: NARANJA,
+      sub: `ingresos hoy ${fmt(totalIngresos)}`
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: MUTED,
+        fontSize: 11.5,
+        marginTop: 10,
+        fontFamily: FONT
+      }
+    }, "Saldo = capital inicial (", fmt(capitalInicial), ") + ingresos − todos los gastos. El saldo con ", CUPO, " equipos solo cambia lo que entra por inscripción."), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: GRIS_CLARO,
+        borderRadius: 8,
+        padding: "10px 12px",
+        marginTop: 10,
+        fontFamily: FONT,
+        fontSize: 13,
+        color: CLARO
+      }
+    }, "🎯 ", /*#__PURE__*/React.createElement("b", {
+      style: {
+        color: BLANCO
+      }
+    }, "Punto de equilibrio:"), " ", necesarioEq <= 0 ? "con lo que ya entra sin contar inscripciones, los gastos están cubiertos." : equiposEq > CUPO ? `no alcanza ni con ${CUPO} equipos (faltarían ${fmt(necesarioEq - CUPO * precioPorEquipo)}).` : `con ${equiposEq} equipos inscriptos cubrís todos los gastos${equipos >= equiposEq ? " (ya lo lograste ✓)" : ` (hoy tenés ${equipos})`}.`)), /*#__PURE__*/React.createElement(Card, {
+      title: "🥧 En qué se va la plata"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6,
+        marginBottom: 12
+      }
+    }, [["todo", "Todo lo presupuestado"], ["pagado", "Solo lo pagado"]].map(([k, t]) => /*#__PURE__*/React.createElement("button", {
+      key: k,
+      "data-ro-ok": "1",
+      onClick: () => setTortaModo(k),
+      style: {
+        background: tortaModo === k ? `${NARANJA}22` : "transparent",
+        border: `1px solid ${tortaModo === k ? NARANJA : BORDE}`,
+        color: tortaModo === k ? NARANJA : CLARO,
+        borderRadius: 8,
+        padding: "6px 12px",
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer",
+        fontFamily: FONT
+      }
+    }, t))), datos.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: MUTED,
+        fontSize: 13,
+        fontFamily: FONT
+      }
+    }, tortaModo === "pagado" ? "Todavía no marcaste ningún gasto como pagado." : "Todavía no hay gastos cargados.") : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 18,
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "center"
+      }
+    }, /*#__PURE__*/React.createElement(Donut, {
+      datos: datos,
+      total: totTorta
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: "1 1 220px",
+        minWidth: 0
+      }
+    }, datos.map(d => /*#__PURE__*/React.createElement("div", {
+      key: d.etiqueta,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "5px 0",
+        borderBottom: `1px solid ${BORDE}`,
+        fontFamily: FONT,
+        fontSize: 13
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        width: 11,
+        height: 11,
+        borderRadius: 3,
+        background: ETQ_COLOR[d.etiqueta] || MUTED,
+        flexShrink: 0
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: BLANCO,
+        flex: 1
+      }
+    }, d.etiqueta), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: MUTED,
+        fontSize: 12
+      }
+    }, Math.round(d.monto / totTorta * 100), "%"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: BLANCO,
+        fontFamily: FONT_MONO,
+        fontWeight: 700,
+        minWidth: 82,
+        textAlign: "right"
+      }
+    }, fmt(d.monto))))))), /*#__PURE__*/React.createElement(Card, {
+      title: "📈 Avance"
+    }, /*#__PURE__*/React.createElement(ProgBar, {
+      label: "Equipos inscriptos",
+      value: equipos,
+      max: CUPO,
+      color: equipos >= CUPO ? VERDE : NARANJA
+    }), /*#__PURE__*/React.createElement(ProgBar, {
+      label: "Números del sorteo vendidos",
+      value: numerosVendidos,
+      max: totalNumeros,
+      color: AZUL
+    }), /*#__PURE__*/React.createElement(ProgBar, {
+      label: "Remeras 7ma vendidas",
+      value: r7VendidoEfectivo + r7VendidoTransferencia,
+      max: total7ma,
+      color: VERDE
+    }), /*#__PURE__*/React.createElement(ProgBar, {
+      label: "Gastos pagados",
+      value: gastoPagado,
+      max: totalEgresos,
+      color: ROJO,
+      texto: `${fmt(gastoPagado)} de ${fmt(totalEgresos)}`
+    })), /*#__PURE__*/React.createElement(Card, {
+      title: "📥 De dónde viene la plata"
+    }, ingresos.map(x => /*#__PURE__*/React.createElement("div", {
+      key: x.l,
+      style: {
+        marginBottom: 8,
+        fontFamily: FONT
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: 12.5,
+        marginBottom: 3
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: CLARO
+      }
+    }, x.l), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: BLANCO,
+        fontFamily: FONT_MONO,
+        fontWeight: 700
+      }
+    }, fmt(x.v))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 6,
+        background: GRIS_CLARO,
+        borderRadius: 3
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: Math.round(x.v / maxIng * 100) + "%",
+        height: "100%",
+        background: VERDE,
+        borderRadius: 3
+      }
+    })))), /*#__PURE__*/React.createElement(Row, {
+      label: "TOTAL INGRESOS",
+      value: fmt(totalIngresos),
+      bold: true,
+      color: VERDE
+    })));
+  })()), modalPremiosAbierto && /*#__PURE__*/React.createElement("div", {
     onClick: () => setModalPremiosAbierto(false),
     style: {
       position: "fixed",
