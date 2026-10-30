@@ -251,10 +251,10 @@ body.fx-public .screen input{pointer-events:none;}
   <button class="btn-p" id="bst" onclick="saveTeams()">Guardar equipos</button>
 </div>
 <div id="screen-groups" class="screen">
-  <div class="stitle">Fase de <span>grupos</span> <button class="btn-flip" id="btn-aro-flip" onclick="toggleAroFlip()" title="Cambia que lado dice Aro A y cual dice Aro B, sin mover los grupos">⇄ Cambiar de lado</button></div>
+  <div class="stitle">Fase de <span>grupos</span></div>
   <div class="gjump" id="gjump"><button onclick="jumpG(0)">Grupo 1</button><button onclick="jumpG(1)">Grupo 2</button><button onclick="jumpG(2)">Grupo 3</button><button onclick="jumpG(3)">Grupo 4</button></div>
   <div id="gc" class="gc-grid"></div>
-  <div class="gc-nota">Los grupos se liquidan de a grupos: en cada aro se juega el grupo completo antes de pasar al siguiente.</div>
+  <div class="gc-nota">Los grupos se liquidan de a grupos: en cada aro se juega el grupo completo antes de pasar al siguiente. Los grupos 1 y 3 juegan en el Aro A; los grupos 2 y 4, en el Aro B.</div>
 </div>
 <div id="screen-bracket" class="screen">
   <div class="stitle">Fase <span>eliminatoria</span> <button class="btn-flip" id="btn-br-view" onclick="toggleBrView()" title="Cambia entre la lista de partidos y la vista en cruces (cuadro)">▦ Vista cruces</button></div>
@@ -336,6 +336,7 @@ function defState(){
 }
 
 let S=FX.load(defState);
+S.aroFlip=false; // Grupos 1 y 3 en el Aro A, grupos 2 y 4 en el Aro B (fijo)
 function save(){FX.save(S);}
 
 function go(id){
@@ -541,7 +542,7 @@ function resetDown(phase,idx){
 
 
 // GROUPS RENDER
-function toggleAroFlip(){S.aroFlip=!S.aroFlip;save();renderGroups();}
+function toggleAroFlip(){}
 function renderGroups(){
   if(!S.locked){document.getElementById('gc').innerHTML='<div class="empty">Primero guardá los equipos<br>en la pestaña "Equipos".</div>';return;}
   function tarjeta(g){
@@ -750,7 +751,15 @@ renderSetup();
 if(S.locked) updateBracketTeams();
 function valid2(st){return st&&Array.isArray(st.teams)&&st.teams.length===4&&Array.isArray(st.gm)&&st.br&&Array.isArray(st.br.oct);}
 window.fxPublicUpdate=function(st){
-  if(!valid2(st))return;S=st;
+  if(!valid2(st))return;
+  // Solo se muestran los partidos con AMBOS puntajes cargados (nunca un resultado a medias).
+  const c=JSON.parse(JSON.stringify(st));c.aroFlip=false;
+  const ok=m=>m&&String(m.sa)!==''&&String(m.sb)!=='';
+  const lim=(m,w)=>{if(m&&!ok(m)){m.sa='';m.sb='';m.err='';if(w)m.w='';}};
+  c.gm.forEach(g=>g.forEach(m=>lim(m,false)));
+  ['oct','qua','sem'].forEach(k=>(c.br[k]||[]).forEach(m=>lim(m,true)));
+  ['fin','ter'].forEach(k=>lim(c.br[k],true));
+  S=c;
   const a=document.querySelector('.screen.active');let id=a?a.id.replace('screen-',''):'groups';
   if(id==='setup')id='groups';go(id);
 };
