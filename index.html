@@ -2549,11 +2549,11 @@ const UNID_LABEL = {
   l: "l"
 };
 const compatibles = u => Object.keys(FAM).filter(k => FAM[k].b === (FAM[u] || FAM.u).b);
-const ETIQUETAS = ["Kit", "Buffet", "Decoración", "Sonido", "Logística", "Merch", "Premios", "Otros"];
+const ETIQUETAS = ["Kit", "Bufet", "Decoración", "Sonido", "Logística", "Merch", "Premios", "Otros"];
 const ETQ_COLOR = {
   Canje: "#B58CFF",
   Kit: NARANJA,
-  Buffet: AMARILLO,
+  Bufet: AMARILLO,
   "Decoración": "#B58CFF",
   Sonido: AZUL,
   "Logística": "#7BD88F",
@@ -2561,8 +2561,8 @@ const ETQ_COLOR = {
   Premios: ROJO,
   Otros: MUTED
 };
-const etqManual = it => it.etiqueta || (/sonido|micr[oó]fono|\bdj\b|parlante/i.test(it.desc || "") ? "Sonido" : /decor|banderin|tela|globo/i.test(it.desc || "") ? "Decoración" : /premio|trofeo|copa|medalla/i.test(it.desc || "") ? "Premios" : /remera|merch|estampa/i.test(it.desc || "") ? "Merch" : /tupper|higiene|transporte|flete|log[ií]stica|carpa|mesa|silla/i.test(it.desc || "") ? "Logística" : "Otros");
-const etqInsumo = it => it.etiqueta || (/decor/i.test(it.desc || "") ? "Decoración" : "Buffet");
+const etqManual = it => (it.etiqueta === "Buffet" ? "Bufet" : it.etiqueta) || (/sonido|micr[oó]fono|\bdj\b|parlante/i.test(it.desc || "") ? "Sonido" : /decor|banderin|tela|globo/i.test(it.desc || "") ? "Decoración" : /premio|trofeo|copa|medalla/i.test(it.desc || "") ? "Premios" : /remera|merch|estampa/i.test(it.desc || "") ? "Merch" : /tupper|higiene|transporte|flete|log[ií]stica|carpa|mesa|silla/i.test(it.desc || "") ? "Logística" : "Otros");
+const etqInsumo = it => (it.etiqueta === "Buffet" ? "Bufet" : it.etiqueta) || (/decor/i.test(it.desc || "") ? "Decoración" : "Bufet");
 const numTxt = v => v === undefined || v === null || v === 0 || v === "" ? "" : String(v).replace(".", ",");
 const parseDec = str => {
   const t = String(str).replace(",", ".");
@@ -4082,7 +4082,7 @@ function TorneoPlanner({
     pagado: !!it.comprado,
     canje: !!it.canje,
     falta: (Number(it.cantidad) || 0) > 0 && !(Number(it.costo) > 0),
-    detalle: `${it.cantidad}${it.unidad ? " " + it.unidad : ""} × ${fmt(Number(it.costo) || 0)} · se edita en Gastronomía`,
+    detalle: `${it.cantidad}${it.unidad ? " " + it.unidad : ""} × ${fmt(Number(it.costo) || 0)} · se edita en Bufet`,
     visible: (Number(it.cantidad) || 0) > 0 || (Number(it.costo) || 0) > 0
   })).filter(l => l.visible), ...manualItems.map((it, i) => ({
     key: "man:" + i,
@@ -4554,7 +4554,7 @@ function TorneoPlanner({
     if (insumosPendientes.length > 0) {
       const subtotalInsumos = insumosPendientes.reduce((a, i) => a + i.cantidad * i.costo, 0);
       lineas.push("");
-      lineas.push("INSUMOS DE GASTRONOMÍA");
+      lineas.push("INSUMOS DEL BUFET");
       insumosPendientes.forEach(item => {
         lineas.push(linea(item.desc || "(sin descripción)", `${item.cantidad}${item.unidad ? " " + item.unidad : ""} x ${fmt(item.costo)}`, item.cantidad * item.costo));
         if (item.obs) lineas.push(`  (${item.obs})`);
@@ -4851,7 +4851,7 @@ function TorneoPlanner({
     label: "🎟 Sorteo"
   }, {
     key: "gastro",
-    label: "🌭 Gastronomía"
+    label: "🌭 Bufet"
   }, {
     key: "remeras",
     label: "👕 Remeras"
@@ -5901,17 +5901,9 @@ function TorneoPlanner({
     tier: "total",
     color: VERDE
   })))), tab === "gastro" && /*#__PURE__*/React.createElement(Card, {
-    title: "Gastronomía Propia",
+    title: "BUFET",
     accent: true
-  }, /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: MUTED,
-      fontSize: 14,
-      marginTop: 0,
-      marginBottom: 10,
-      fontFamily: FONT
-    }
-  }, "Club de Maltas, Focacceria Marzano e Istanbul tienen sus stands. El Urqui controla parrilla y bebidas."), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       color: BLANCO,
       fontSize: 14.5,
@@ -5986,20 +5978,6 @@ function TorneoPlanner({
       marginBottom: 8
     }
   }, "+ Agregar producto"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `${VERDE}14`,
-      border: `1px solid ${VERDE}44`,
-      borderRadius: 8,
-      padding: "10px 12px",
-      marginTop: 6,
-      marginBottom: 20
-    }
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Total ganancia (lo que vendemos)",
-    value: fmt(totalVentaProductos),
-    bold: true,
-    color: VERDE
-  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -6119,32 +6097,7 @@ function TorneoPlanner({
       fontFamily: FONT,
       marginBottom: 8
     }
-  }, "+ Agregar insumo"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `${ROJO}14`,
-      border: `1px solid ${ROJO}44`,
-      borderRadius: 8,
-      padding: "10px 12px",
-      marginTop: 6,
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Total costo (insumos)",
-    value: fmt(costoInsumosTotal),
-    bold: true,
-    color: ROJO
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: GRIS_CLARO,
-      borderRadius: 8,
-      padding: "10px 12px"
-    }
-  }, /*#__PURE__*/React.createElement(Row, {
-    label: "Ganancia neta",
-    value: fmt(totalVentaProductos - costoInsumosTotal),
-    bold: true,
-    color: VERDE
-  }))), tab === "sponsors" && /*#__PURE__*/React.createElement(Card, {
+  }, "+ Agregar insumo")), tab === "sponsors" && /*#__PURE__*/React.createElement(Card, {
     title: "Sponsors del Evento",
     accent: true
   }, /*#__PURE__*/React.createElement("div", {
