@@ -121,6 +121,7 @@ input[type="text"]:disabled{opacity:.5;}
 .mdb{display:flex;gap:10px;}
 .btn-can{flex:1;background:var(--navy3);color:var(--white2);border:1px solid var(--border);padding:13px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
 .btn-con{flex:1;background:var(--red);color:#fff;border:none;padding:13px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.empty-c{position:fixed;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);font-size:17px;font-weight:600;pointer-events:none;}
 .empty{color:var(--muted);text-align:center;padding:40px 20px;font-size:13px;font-weight:500;line-height:1.7;}
 .gsetup{margin-bottom:20px;}
 /* Vista cruces (llaves en árbol) */
@@ -203,8 +204,10 @@ body.fx-embed .embed-only{display:inline-block;}
 .hbtns.embed-only{display:none;}
 body.fx-embed .hbtns.embed-only{display:flex;}
 .tir input.card{cursor:grab;caret-color:transparent;user-select:none;-webkit-user-select:none;}.tir input.card:active{cursor:grabbing;}.tir input.libre{color:#4f5a72;background:#0e1527;border-style:dashed;border-color:#26314d;}.tir input.sel{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.45);}
-.gc-nota{margin:14px auto 6px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.4;max-width:520px;}
+.gc-nota{display:none;margin:14px auto 6px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.4;max-width:520px;}
 .btn-h-green{background:rgba(53,208,186,.14);color:#4fdcc8;border:1px solid rgba(53,208,186,.45);}
+body.fx-pts.fx-embed .btn-logout{display:inline-block!important;}
+.btn-logout{display:none;color:#ff8a8a;background:rgba(255,255,255,.05);border:1px solid var(--border);}
 body.fx-pts #nav-setup,body.fx-pts #screen-setup,body.fx-pts #bst,body.fx-pts #btn-azar,body.fx-pts #btn-limpiar,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
 body.fx-pts #screen-setup input{pointer-events:none;}
 body.fx-public .hbtns,body.fx-public #nav-setup,body.fx-public #btn-aro-flip{display:none!important;}
@@ -273,6 +276,7 @@ body.fx-public .screen input{pointer-events:none;}
     <button class="btn-h btn-h-blue embed-only" id="btn-votos" onclick="parent.postMessage({fx:'votacion'},'*')">🗳️ Votación</button>
     <button class="btn-h btn-h-or embed-only" onclick="parent.postMessage({fx:'descargar'},'*')">⬇ Descargar</button>
     <button class="btn-reset" onclick="confirmReset()">Reiniciar</button>
+    <button class="btn-h btn-logout" onclick="parent.postMessage({fx:'logout'},'*')">⎋ Cerrar sesión</button>
   </div>
 </header>
 <nav>
@@ -608,7 +612,8 @@ function resetDown(phase,idx){
 // GROUPS RENDER
 function toggleAroFlip(){}
 function renderGroups(){
-  if(!S.locked){document.getElementById('gc').innerHTML='<div class="empty">Primero guardá los equipos<br>en la pestaña "Equipos".</div>';return;}
+  const nota=document.querySelector('.gc-nota');if(nota)nota.style.display=S.locked?'block':'none';
+  if(!S.locked){document.getElementById('gc').innerHTML=window.__FX_PTS?'<div class="empty-c">Los equipos todavía no están cargados</div>':'<div class="empty">Primero guardá los equipos<br>en la pestaña "Equipos".</div>';return;}
   function tarjeta(g){
     const st=calcSt(g),done=doneCnt(g);
     let c=`<div class="gc g${g}">
@@ -721,8 +726,7 @@ function renderBracket(){
   const xv=S.brView==='x';
   document.getElementById('screen-bracket').classList.toggle('wide',xv);
   const bb=document.getElementById('btn-br-view');if(bb) bb.textContent=xv?'☰ Vista lista':'▦ Vista cruces';
-  if(!S.locked){document.getElementById('bc').innerHTML='<div class="empty">Primero guardá los equipos.</div>';return;}
-  if(!S.br.oct[0].ta){document.getElementById('bc').innerHTML='<div class="empty">Guardá los equipos para ver la llave.<br>Se actualiza en tiempo real con los resultados.</div>';return;}
+  if(!S.locked||!S.br.oct[0].ta){document.getElementById('bc').innerHTML=window.__FX_PTS?'<div class="empty-c">Los equipos todavía no están cargados</div>':(!S.locked?'<div class="empty">Primero guardá los equipos.</div>':'<div class="empty">Guardá los equipos para ver la llave.<br>Se actualiza en tiempo real con los resultados.</div>');return;}
   if(xv){document.getElementById('bc').innerHTML=renderCross();return;}
   let h='';
   // Octavos: alternados Aro A / Aro B
