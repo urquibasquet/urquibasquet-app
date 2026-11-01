@@ -924,8 +924,8 @@ if(window.__FX_PUBLIC){go('groups');}
     var android=/Android/i.test(ua);
     var movil=ios||android||/Mobile/i.test(ua)||(('ontouchstart' in window)&&window.innerWidth<900);
     var forzar=/instalar/i.test(location.search+location.hash);
-    var cerrado=false;try{var t=parseInt(localStorage.getItem('a2hs-visto')||'0',10);cerrado=t>0&&(Date.now()-t<30*24*3600*1000);}catch(e){}
-    function marcar(){try{localStorage.setItem('a2hs-visto',String(Date.now()));}catch(e){}}
+    var cerrado=false;try{cerrado=sessionStorage.getItem('a2hs-visto')==='1';}catch(e){}
+    function marcar(){try{sessionStorage.setItem('a2hs-visto','1');}catch(e){}}
     window.addEventListener('appinstalled',marcar);
     if(standalone){marcar();return;}
     if(!forzar&&(!movil||cerrado))return;
