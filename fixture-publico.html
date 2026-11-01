@@ -880,7 +880,7 @@ if(window.__FX_PUBLIC){go('groups');}
     if(standalone||!movil||cerrado)return;
     var ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
     document.getElementById('a2t').innerHTML=ios
-      ?'Tocá <b style="display:inline">Compartir ⬆︎</b> y elegí <b style="display:inline">«Agregar a inicio»</b>. Se abre directo en el fixture.'
+      ?'1) Tocá <b style="display:inline">Compartir</b> (el cuadradito con la flecha ↑, abajo). 2) Deslizá y elegí <b style="display:inline">«Añadir a pantalla de inicio»</b>. 3) Tocá <b style="display:inline">«Añadir»</b>. Se abre directo en el fixture.'
       :'Tocá el menú <b style="display:inline">⋮</b> y elegí <b style="display:inline">«Agregar a la pantalla principal»</b>. Se abre directo en el fixture.';
     document.getElementById('a2hs').style.display='flex';
     document.getElementById('a2x').onclick=function(){document.getElementById('a2hs').style.display='none';try{localStorage.setItem('a2hs-cerrado','1');}catch(e){}};
