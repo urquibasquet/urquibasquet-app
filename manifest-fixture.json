@@ -1,0 +1,16 @@
+{
+  "name": "Fixture El Urqui Básquet",
+  "short_name": "Fixture Urqui",
+  "description": "Fixture y resultados en vivo del torneo 3x3 El Urqui Básquet",
+  "start_url": "fixture-publico.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17408b",
+  "theme_color": "#17408b",
+  "icons": [
+    { "src": "icon-fixture-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-fixture-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-fixture-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
