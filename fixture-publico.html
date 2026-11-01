@@ -205,7 +205,7 @@ body.fx-embed .hbtns.embed-only{display:flex;}
 .tir input.card{cursor:grab;caret-color:transparent;user-select:none;-webkit-user-select:none;}.tir input.card:active{cursor:grabbing;}.tir input.libre{color:#4f5a72;background:#0e1527;border-style:dashed;border-color:#26314d;}.tir input.sel{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.45);}
 .gc-nota{margin:14px auto 6px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.4;max-width:520px;}
 .btn-h-green{background:rgba(53,208,186,.14);color:#4fdcc8;border:1px solid rgba(53,208,186,.45);}
-body.fx-pts #nav-setup,body.fx-pts #screen-setup,body.fx-pts #bst,body.fx-pts #btn-azar,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
+body.fx-pts #nav-setup,body.fx-pts #screen-setup,body.fx-pts #bst,body.fx-pts #btn-azar,body.fx-pts #btn-limpiar,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
 body.fx-pts #screen-setup input{pointer-events:none;}
 body.fx-public .hbtns,body.fx-public #nav-setup,body.fx-public #btn-aro-flip{display:none!important;}
 body.fx-public .screen input{pointer-events:none;}
@@ -282,7 +282,7 @@ body.fx-public .screen input{pointer-events:none;}
 </nav>
 <div id="vote-box"></div>
 <div id="screen-setup" class="screen active">
-  <div class="stitle">Cargar <span>equipos</span> <button class="btn-flip embed-only" onclick="parent.postMessage({fx:'actualizar'},'*')" title="Trae los equipos desde la hoja de Google Drive">🔄 Actualizar equipos</button><button class="btn-flip embed-only" onclick="parent.postMessage({fx:'drive-config'},'*')" title="Cambiar el link de la hoja de Drive">⚙</button><button class="btn-flip" id="btn-azar" onclick="sortearEquipos()" title="Reparte al azar los equipos que faltan en los casilleros libres">🎲 Cargar al azar</button></div>
+  <div class="stitle">Cargar <span>equipos</span> <button class="btn-flip embed-only" onclick="parent.postMessage({fx:'actualizar'},'*')" title="Trae los equipos desde la hoja de Google Drive">🔄 Actualizar equipos</button><button class="btn-flip embed-only" onclick="parent.postMessage({fx:'drive-config'},'*')" title="Cambiar el link de la hoja de Drive">⚙</button><button class="btn-flip" id="btn-azar" onclick="sortearEquipos()" title="Reparte al azar los equipos que faltan en los casilleros libres">🎲 Cargar al azar</button><button class="btn-flip" id="btn-limpiar" onclick="limpiarGrupos()" title="Saca todos los equipos de los grupos y borra los puntos">🧹 Limpiar grupos</button></div>
   <div id="imp-tray"></div>
   <div id="sf"></div>
   <button class="btn-p" id="bst" onclick="saveTeams()">Guardar equipos</button>
@@ -484,6 +484,11 @@ function bindSetupDnD(){
     inp.addEventListener('input',()=>renderTray());
   });
 }
+function limpiarGrupos(){
+  if(!confirm('¿Limpiar los grupos?\n\nSe sacan todos los equipos de los casilleros y se borran los puntos y las llaves. Los equipos importados quedan en la bandeja para volver a acomodarlos.'))return;
+  const _imp=S.imp;S=defState();S.imp=_imp;S.teams=[0,1,2,3].map(()=>['','','','']);S.locked=false;S.aroFlip=false;
+  impSel=null;slotSel=null;save();go('setup');showToast('Grupos limpios');
+}
 function sortearEquipos(){
   if(S.locked){showToast('Tocá "Editar equipos" primero');return;}
   const imp=S.imp||[];
@@ -648,6 +653,7 @@ function renderGroups(){
 
 
 function setGS(g,mi,side,val){
+  if(window.__FX_PUBLIC){renderGroups();return;}
   const m=S.gm[g][mi];
   if(side==='a') m.sa=val; else m.sb=val;
   m.err='';
@@ -762,6 +768,7 @@ function bmHTML(m,phase,idx,label){
 }
 
 function setBS(phase,idx,side,val){
+  if(window.__FX_PUBLIC){renderBracket();return;}
   const m=(phase==='fin'||phase==='ter')?S.br[phase]:S.br[phase][idx];
   if(side==='a') m.sa=val; else m.sb=val;
   m.err='';m.w='';
@@ -936,6 +943,15 @@ if(window.__FX_PUBLIC){go('groups');}
     document.getElementById('a2x').onclick=function(){bn.style.display='none';marcar();};
   }catch(e){}
   try{if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw-fixture.js').catch(function(){});}catch(e){}
+})();
+</script>
+<script>
+(function(){
+  function bloquear(){document.querySelectorAll('input').forEach(function(i){i.readOnly=true;i.setAttribute('readonly','');i.setAttribute('inputmode','none');i.tabIndex=-1;});}
+  bloquear();
+  new MutationObserver(bloquear).observe(document.body,{childList:true,subtree:true});
+  ['beforeinput','keydown','paste','drop'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target&&e.target.tagName==='INPUT'){e.preventDefault();e.stopPropagation();}},true);});
+  document.addEventListener('focusin',function(e){if(e.target&&e.target.tagName==='INPUT')e.target.blur();},true);
 })();
 </script>
 </body>
