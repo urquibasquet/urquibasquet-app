@@ -612,8 +612,8 @@ function resetDown(phase,idx){
 // GROUPS RENDER
 function toggleAroFlip(){}
 function renderGroups(){
-  const nota=document.querySelector('.gc-nota');if(nota)nota.style.display=S.locked?'block':'none';
-  if(!S.locked){document.getElementById('gc').innerHTML=window.__FX_PTS?'<div class="empty-c">Los equipos todavía no están cargados</div>':'<div class="empty">Primero guardá los equipos<br>en la pestaña "Equipos".</div>';return;}
+  const nota=document.querySelector('.gc-nota');if(nota)nota.style.display=S.locked?'block':'none';const gj=document.querySelector('.gjump');if(gj)gj.style.display=S.locked?'':'none';
+  if(!S.locked){document.getElementById('gc').innerHTML=(window.__FX_PTS||window.__FX_PUBLIC)?'<div class="empty-c">Los equipos todavía no están cargados</div>':'<div class="empty">Primero guardá los equipos<br>en la pestaña "Equipos".</div>';return;}
   function tarjeta(g){
     const st=calcSt(g),done=doneCnt(g);
     let c=`<div class="gc g${g}">
@@ -726,7 +726,7 @@ function renderBracket(){
   const xv=S.brView==='x';
   document.getElementById('screen-bracket').classList.toggle('wide',xv);
   const bb=document.getElementById('btn-br-view');if(bb) bb.textContent=xv?'☰ Vista lista':'▦ Vista cruces';
-  if(!S.locked||!S.br.oct[0].ta){document.getElementById('bc').innerHTML=window.__FX_PTS?'<div class="empty-c">Los equipos todavía no están cargados</div>':(!S.locked?'<div class="empty">Primero guardá los equipos.</div>':'<div class="empty">Guardá los equipos para ver la llave.<br>Se actualiza en tiempo real con los resultados.</div>');return;}
+  if(!S.locked||!S.br.oct[0].ta){document.getElementById('bc').innerHTML=(window.__FX_PTS||window.__FX_PUBLIC)?'<div class="empty-c">Los equipos todavía no están cargados</div>':(!S.locked?'<div class="empty">Primero guardá los equipos.</div>':'<div class="empty">Guardá los equipos para ver la llave.<br>Se actualiza en tiempo real con los resultados.</div>');return;}
   if(xv){document.getElementById('bc').innerHTML=renderCross();return;}
   let h='';
   // Octavos: alternados Aro A / Aro B
@@ -855,7 +855,7 @@ if(window.__FX_PUBLIC){go('groups');}
   function equipos(st){var o=[];st.teams.forEach(function(g){g.forEach(function(n){if(n&&o.indexOf(n)<0)o.push(n);});});return o;}
   function render(){
     var st=window.fxGetState();
-    if(!st.locked){box.innerHTML='<div class="vb"><h3>Fixture del torneo</h3><p class="vs" style="margin:0">Los equipos todavía no están cargados. Volvé en un rato.</p></div>';return;}
+    if(!st.locked){box.innerHTML='';return;}
     var v=voted||miVoto(), abierta=cfg.abierta!==false, h='<div class="vb">';
     if(!v && abierta && !abierto){
       h+='<div id="vopen" style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-weight:800;font-size:14px"><span>🏆 ¿Quién gana el torneo?</span><span style="background:var(--red);border-radius:8px;padding:7px 14px;font-size:12.5px">Votá acá</span></div>';
