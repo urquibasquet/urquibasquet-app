@@ -207,6 +207,8 @@ body.fx-embed .hbtns.embed-only{display:flex;}
 .tir input.card{cursor:grab;caret-color:transparent;user-select:none;-webkit-user-select:none;}.tir input.card:active{cursor:grabbing;}.tir input.libre{color:#4f5a72;background:#0e1527;border-style:dashed;border-color:#26314d;}.tir input.sel{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.45);}
 .gc-nota{margin:14px auto 6px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.4;max-width:520px;}
 .btn-h-green{background:rgba(53,208,186,.14);color:#4fdcc8;border:1px solid rgba(53,208,186,.45);}
+body.fx-pts .hbtns,body.fx-pts #bst,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
+body.fx-pts #screen-setup input{pointer-events:none;}
 body.fx-public .hbtns,body.fx-public #nav-setup,body.fx-public #btn-aro-flip{display:none!important;}
 body.fx-public .screen input{pointer-events:none;}
 #vote-box{max-width:760px;margin:0 auto;padding:0 16px;}
@@ -284,7 +286,7 @@ const FX=(()=>{
   function load(defState){
     // Modo embebido (dentro de la app, online): el estado lo trae la app y se guarda en la nube.
     if(window.__FX_PUBLIC){document.body.classList.add('fx-public');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
-    if(window.__FX_EMBED){document.body.classList.add('fx-embed');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
+    if(window.__FX_EMBED){document.body.classList.add('fx-embed');if(window.__FX_PTS)document.body.classList.add('fx-pts');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
     try{const t=localStorage.getItem(KEY);const j=t&&JSON.parse(t);if(j&&valid(j.state))return j.state;}catch(e){}
     if(valid(window.__FX_STATE))return window.__FX_STATE;
     return defState();
@@ -305,8 +307,8 @@ const FX=(()=>{
 })();
 
 const OCTVOS_T=[
-  {a:[1,0],b:[4,2]},{a:[1,1],b:[4,3]},{a:[1,2],b:[4,0]},{a:[1,3],b:[4,1]},
-  {a:[2,0],b:[3,2]},{a:[2,1],b:[3,3]},{a:[2,2],b:[3,0]},{a:[2,3],b:[3,1]}
+  {a:[1,0],b:[4,1]},{a:[1,2],b:[4,3]},{a:[1,1],b:[4,0]},{a:[1,3],b:[4,2]},
+  {a:[2,0],b:[3,1]},{a:[2,2],b:[3,3]},{a:[2,1],b:[3,0]},{a:[2,3],b:[3,2]}
 ];
 
 const EXAMPLE_TEAMS=[
@@ -762,6 +764,11 @@ window.fxPublicUpdate=function(st){
   S=c;
   const a=document.querySelector('.screen.active');let id=a?a.id.replace('screen-',''):'groups';
   if(id==='setup')id='groups';go(id);
+};
+window.fxRoUpdate=function(st){
+  if(!valid2(st))return;S=st;S.aroFlip=false;
+  const a=document.querySelector('.screen.active');const id=a?a.id.replace('screen-',''):'setup';
+  if(id==='setup')renderSetup();else go(id);
 };
 if(window.__FX_PUBLIC){go('groups');}
 </script>
