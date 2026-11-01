@@ -207,7 +207,7 @@ body.fx-embed .hbtns.embed-only{display:flex;}
 .tir input.card{cursor:grab;caret-color:transparent;user-select:none;-webkit-user-select:none;}.tir input.card:active{cursor:grabbing;}.tir input.libre{color:#4f5a72;background:#0e1527;border-style:dashed;border-color:#26314d;}.tir input.sel{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.45);}
 .gc-nota{margin:14px auto 6px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.4;max-width:520px;}
 .btn-h-green{background:rgba(53,208,186,.14);color:#4fdcc8;border:1px solid rgba(53,208,186,.45);}
-body.fx-pts #bst,body.fx-pts #btn-azar,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
+body.fx-pts #nav-setup,body.fx-pts #screen-setup,body.fx-pts #bst,body.fx-pts #btn-azar,body.fx-pts #imp-tray,body.fx-pts .stitle .btn-flip.embed-only{display:none!important;}
 body.fx-pts #screen-setup input{pointer-events:none;}
 body.fx-public .hbtns,body.fx-public #nav-setup,body.fx-public #btn-aro-flip{display:none!important;}
 body.fx-public .screen input{pointer-events:none;}
@@ -256,7 +256,7 @@ body.fx-public .screen input{pointer-events:none;}
   <div class="stitle">Fase de <span>grupos</span></div>
   <div class="gjump" id="gjump"><button onclick="jumpG(0)">Grupo 1</button><button onclick="jumpG(1)">Grupo 2</button><button onclick="jumpG(2)">Grupo 3</button><button onclick="jumpG(3)">Grupo 4</button></div>
   <div id="gc" class="gc-grid"></div>
-  <div class="gc-nota">Los grupos se liquidan de a grupos: en cada aro se juega el grupo completo antes de pasar al siguiente. Los grupos 1 y 3 juegan en el Aro A; los grupos 2 y 4, en el Aro B.</div>
+  <div class="gc-nota">Los grupos se liquidan de a grupos: en cada aro se juega el grupo completo antes de pasar al siguiente.</div>
 </div>
 <div id="screen-bracket" class="screen">
   <div class="stitle">Fase <span>eliminatoria</span> <button class="btn-flip" id="btn-br-view" onclick="toggleBrView()" title="Cambia entre la lista de partidos y la vista en cruces (cuadro)">▦ Vista cruces</button></div>
@@ -286,7 +286,8 @@ const FX=(()=>{
   function load(defState){
     // Modo embebido (dentro de la app, online): el estado lo trae la app y se guarda en la nube.
     if(window.__FX_PUBLIC){document.body.classList.add('fx-public');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
-    if(window.__FX_EMBED){document.body.classList.add('fx-embed');if(window.__FX_PTS)document.body.classList.add('fx-pts');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
+    if(window.__FX_PTS)document.body.classList.add('fx-pts');
+    if(window.__FX_EMBED){document.body.classList.add('fx-embed');return valid(window.__FX_STATE)?window.__FX_STATE:defState();}
     try{const t=localStorage.getItem(KEY);const j=t&&JSON.parse(t);if(j&&valid(j.state))return j.state;}catch(e){}
     if(valid(window.__FX_STATE))return window.__FX_STATE;
     return defState();
@@ -772,7 +773,7 @@ function doReset(){const _imp=S.imp,_t=S.teams,_l=S.locked;S=defState();S.imp=_i
 // INIT
 renderSetup();
 if(S.locked) updateBracketTeams();
-if(window.__FX_PTS&&S.locked) go('groups');
+if(window.__FX_PTS) go('groups');
 function valid2(st){return st&&Array.isArray(st.teams)&&st.teams.length===4&&Array.isArray(st.gm)&&st.br&&Array.isArray(st.br.oct);}
 window.fxPublicUpdate=function(st){
   if(!valid2(st))return;
