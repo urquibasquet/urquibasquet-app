@@ -9636,7 +9636,7 @@ function LoginGate({
         fontFamily: F,
         position: "relative",
         overflow: "hidden",
-        background: "radial-gradient(900px 500px at 50% -10%, #3a1a0c 0%, rgba(58,26,12,0) 60%), radial-gradient(700px 500px at 100% 110%, #10244d 0%, rgba(16,36,77,0) 60%), #0F1013"
+        background: "linear-gradient(135deg, #1D428A 0%, #5a2a6a 50%, #C8102E 100%)"
       }
     }, /*#__PURE__*/React.createElement("style", null, `
           .urq-in { transition: border-color .15s, box-shadow .15s; }
@@ -9684,19 +9684,13 @@ function LoginGate({
       }
     }, "El Urqui Básquet"), /*#__PURE__*/React.createElement("h2", {
       style: {
-        fontSize: 21,
+        fontSize: 22,
         fontWeight: 800,
         color: "#F2F1ED",
-        margin: "4px 0 2px",
+        margin: "4px 0 0",
         fontFamily: F
       }
-    }, "7ma Edición"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: "#8A8D95",
-        fontFamily: F
-      }
-    }, "Torneo 3×3 · Parque Urquiza")), info && /*#__PURE__*/React.createElement("p", {
+    }, "Urqui App")), info && /*#__PURE__*/React.createElement("p", {
       style: {
         color: "#FFD166",
         fontSize: 12.5,
@@ -9772,15 +9766,7 @@ function LoginGate({
         letterSpacing: "0.02em",
         opacity: cargando ? 0.7 : 1
       }
-    }, cargando ? "Ingresando..." : "Ingresar"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "center",
-        marginTop: 16,
-        fontSize: 11,
-        color: "#5C606A",
-        fontFamily: F
-      }
-    }, "7 de noviembre de 2026")));
+    }, cargando ? "Ingresando..." : "Ingresar")));
   }
   return /*#__PURE__*/React.createElement(SoloLecturaCtx.Provider, {
     value: soloLectura
