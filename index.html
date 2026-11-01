@@ -10566,15 +10566,9 @@ function FixtureView() {
         overflowY: "auto",
         fontFamily: FONT
       }
-    }, /*#__PURE__*/React.createElement("h2", {
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 17,
-        margin: "0 0 10px",
-        color: BLANCO
-      }
-    }, "🗳️ Votación del ganador"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        paddingTop: 4
+        paddingTop: 0
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -10583,15 +10577,15 @@ function FixtureView() {
         justifyContent: "space-between",
         gap: 10,
         flexWrap: "wrap",
-        marginBottom: 8
+        marginBottom: 6
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("h2", {
       style: {
-        color: BLANCO,
-        fontSize: 14,
-        fontWeight: 700
+        fontSize: 18,
+        margin: 0,
+        color: BLANCO
       }
-    }, "🏆 Votación del ganador · ", tot, " ", tot === 1 ? "voto" : "votos"), /*#__PURE__*/React.createElement("button", {
+    }, "🗳️ Votación"), /*#__PURE__*/React.createElement("button", {
       onClick: () => cambiarAbierta(!votoCfg.abierta),
       style: {
         background: votoCfg.abierta ? `${VERDE}18` : `${ROJO}18`,
@@ -10604,7 +10598,21 @@ function FixtureView() {
         cursor: "pointer",
         fontFamily: FONT
       }
-    }, votoCfg.abierta ? "● Abierta (tocá para cerrar)" : "● Cerrada (tocá para abrir)")), lista.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, votoCfg.abierta ? "● Abierta (tocá para cerrar)" : "● Cerrada (tocá para abrir)")), /*#__PURE__*/React.createElement("p", {
+      style: {
+        fontSize: 11,
+        color: MUTED,
+        margin: "0 0 12px",
+        lineHeight: 1.45
+      }
+    }, "Los votos se cuentan en esta pantalla: mientras dure la votación, dejá abierta la sección Fixture. Los votantes ven los porcentajes después de votar."), /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: MUTED,
+        fontSize: 13,
+        fontWeight: 700,
+        margin: "0 0 8px"
+      }
+    }, tot, " ", tot === 1 ? "voto" : "votos"), lista.length === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
         color: MUTED,
         fontSize: 12.5
@@ -10649,14 +10657,7 @@ function FixtureView() {
         fontFamily: FONT_MONO,
         fontWeight: 700
       }
-    }, c, " · ", tot ? Math.round(c * 100 / tot) : 0, "%"))), /*#__PURE__*/React.createElement("p", {
-      style: {
-        fontSize: 11,
-        color: MUTED,
-        margin: "10px 0 0",
-        lineHeight: 1.45
-      }
-    }, "Los votos se cuentan en esta pantalla: mientras dure la votación, dejá abierta la sección Fixture. Los votantes ven los porcentajes después de votar.")), /*#__PURE__*/React.createElement("div", {
+    }, c, " · ", tot ? Math.round(c * 100 / tot) : 0, "%")))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 8,
