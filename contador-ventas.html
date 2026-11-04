@@ -9,7 +9,7 @@
 <script data-fb src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script data-fb src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script data-fb src="firebase-config.js"></script>
-<script>if (window.__CFG_FIJO || /[#&]d=/.test(window.location.hash || "")) document.documentElement.classList.add("sin-login");</script>
+<script>(function(){var off=!!window.__CFG_FIJO,h=/[#&]d=/.test(window.location.hash||""),e=false;try{e=window.parent!==window}catch(x){e=true}if(!off&&!h&&!e){document.documentElement.style.visibility="hidden";window.location.replace("index.html");}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -188,6 +188,9 @@
   }
   .toast.show { opacity: 1; }
 
+  .header { justify-content: flex-start !important; flex-wrap: nowrap !important; } .header .titles { margin-right: auto; flex-shrink: 0; } .status-bar { min-width: 0; flex-wrap: wrap; } .btn-salir { white-space: nowrap; flex-shrink: 0; }
+  @media (max-width: 700px) { .header { flex-wrap: wrap !important; } .btn-salir { margin-left: auto; } }
+  .btn-salir { background: var(--gris); border: 1px solid var(--rojo); color: var(--rojo); font-weight: 800; font-size: 12px; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
   html.sin-login #loginVentas { display: none !important; }
   #loginVentas { position: fixed; inset: 0; z-index: 2000; background: var(--fondo); display: flex; align-items: center; justify-content: center; padding: 20px; }
   #loginVentas .caja { width: 100%; max-width: 340px; }
@@ -201,16 +204,6 @@
 </style>
 </head>
 <body>
-<div id="loginVentas">
-  <form class="caja" id="formLoginVentas" autocomplete="on">
-    <div class="kicker">El Urqui Básquet · 7ma Edición</div>
-    <h1>Contador de Ventas</h1>
-    <input type="text" id="lvUsuario" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" />
-    <input type="password" id="lvClave" placeholder="Contraseña" autocomplete="current-password" />
-    <div class="err" id="lvError"></div>
-    <button type="submit" id="lvBoton">Ingresar</button>
-  </form>
-</div>
 <div class="overlay-metodo" id="overlayMetodo">
   <div class="caja">
     <h3 id="metodoTitulo">¿Efectivo o Transferencia?</h3>
@@ -233,8 +226,8 @@
       <span>· <strong id="infoCompradores">—</strong></span>
       <span>· <strong id="modoVersion">—</strong></span>
       <button class="mini" id="btnActualizar">↻ Actualizar</button>
-      <button class="mini" id="btnSalir">Salir</button>
     </div>
+    <button class="btn-salir" id="btnSalir">⎋ Cerrar sesión</button>
   </div>
 
   <div class="buscador-comprador">
@@ -914,18 +907,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
 <script>
 (function () {
-  var ov = document.getElementById("loginVentas");
   var bAct = document.getElementById("btnActualizar"), bSal = document.getElementById("btnSalir");
-  function ocultarOv() { ov.style.display = "none"; document.documentElement.classList.add("sin-login"); }
   if (ES_OFFLINE || DESDE_HASH) {
     if (bAct) bAct.style.display = "none";
     if (bSal) bSal.style.display = "none";
-    ocultarOv();
     return;
   }
-  var errEl = document.getElementById("lvError");
+  var stEl = document.getElementById("statusText");
   if (typeof firebase === "undefined" || !window.FIREBASE_CONFIG) {
-    errEl.textContent = "No se pudo conectar. Revisá la conexión y recargá la página.";
+    if (stEl) { stEl.textContent = "⚠ No se pudo conectar. Revisá la conexión y recargá."; stEl.style.color = "#FF6B6B"; }
     return;
   }
   try { firebase.initializeApp(window.FIREBASE_CONFIG); } catch (e) {}
@@ -959,35 +949,22 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           window.location.reload();
           return;
         }
-      } else if (manual && typeof mostrarToast === "function") mostrarToast("Datos al día ✓");
+      } else if (manual && typeof mostrarToast === "function") mostrarToast("Datos al día \u2713");
     } catch (e) {
       console.error("No se pudo sincronizar:", e);
-      if (SIN_CFG) { var st = document.getElementById("statusText"); if (st) { st.textContent = "⚠ " + (e && e.message ? e.message : "No se pudieron cargar los datos") + " Tocá ↻ Actualizar para reintentar."; st.style.color = "#FF6B6B"; } }
+      if (SIN_CFG && stEl) { stEl.textContent = "⚠ " + (e && e.message ? e.message : "No se pudieron cargar los datos") + " Tocá ↻ Actualizar para reintentar."; stEl.style.color = "#FF6B6B"; }
       if (manual && typeof mostrarToast === "function") mostrarToast("No se pudo actualizar (¿sin conexión?)");
     }
   }
   if (bAct) bAct.onclick = function () { sincronizar(true); };
-  var EMBEBIDO = false; try { EMBEBIDO = window.parent !== window; } catch (e) {}
-  if (bSal) bSal.onclick = function () { if (EMBEBIDO) window.parent.postMessage({ cv: "salir" }, window.location.origin); else auth.signOut(); };
+  // Este contador se usa dentro de la app: el cierre de sesion se lo pide a la app.
+  if (bSal) bSal.onclick = function () { try { window.parent.postMessage({ cv: "salir" }, window.location.origin); } catch (e) {} };
 
   auth.onAuthStateChanged(function (u) {
-    if (u) { ocultarOv(); if (SIN_CFG) { var st0 = document.getElementById("statusText"); if (st0) { st0.textContent = "Cargando datos…"; st0.style.color = ""; } } sincronizar(false); }
-    else { ov.style.display = "flex"; document.documentElement.classList.remove("sin-login"); }
+    if (!u) return;
+    if (SIN_CFG && stEl) { stEl.textContent = "Cargando datos…"; stEl.style.color = ""; }
+    sincronizar(false);
   });
-  document.getElementById("formLoginVentas").onsubmit = function (ev) {
-    ev.preventDefault();
-    var us = document.getElementById("lvUsuario").value.trim().toLowerCase();
-    var pw = document.getElementById("lvClave").value;
-    if (!us || !pw) { errEl.textContent = "Completá usuario y contraseña."; return; }
-    var email = us.indexOf("@") >= 0 ? us : us + "@urquibasquet.local";
-    errEl.textContent = ""; var bt = document.getElementById("lvBoton"); bt.disabled = true; bt.textContent = "Ingresando...";
-    auth.signInWithEmailAndPassword(email, pw).then(function () {
-      document.getElementById("lvClave").value = "";
-    }).catch(function (e) {
-      console.error(e);
-      errEl.textContent = (e && e.code === "auth/network-request-failed") ? "Sin conexión. Probá de nuevo." : "Usuario o contraseña incorrectos.";
-    }).then(function () { bt.disabled = false; bt.textContent = "Ingresar"; });
-  };
 })();
 </script>
 </body>
