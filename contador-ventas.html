@@ -940,7 +940,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   async function sincronizar(manual) {
     try {
       var d = await db.collection("urqui").doc("contador-config").get();
-      if (!d.exists) throw new Error("La app todavía no publicó los datos del contador (abrilo una vez desde la app).");
+      if (!d.exists) throw new Error("La app todavía no publicó los datos del contador: entrá una vez a la app como administrador.");
       var base = JSON.parse(d.data().value);
       var snap = await db.collection("comprobantes").get();
       var c = {};
@@ -962,14 +962,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       } else if (manual && typeof mostrarToast === "function") mostrarToast("Datos al día ✓");
     } catch (e) {
       console.error("No se pudo sincronizar:", e);
+      if (SIN_CFG) { var st = document.getElementById("statusText"); if (st) { st.textContent = "⚠ " + (e && e.message ? e.message : "No se pudieron cargar los datos") + " Tocá ↻ Actualizar para reintentar."; st.style.color = "#FF6B6B"; } }
       if (manual && typeof mostrarToast === "function") mostrarToast("No se pudo actualizar (¿sin conexión?)");
     }
   }
   if (bAct) bAct.onclick = function () { sincronizar(true); };
-  if (bSal) bSal.onclick = function () { auth.signOut(); };
+  var EMBEBIDO = false; try { EMBEBIDO = window.parent !== window; } catch (e) {}
+  if (bSal) bSal.onclick = function () { if (EMBEBIDO) window.parent.postMessage({ cv: "salir" }, window.location.origin); else auth.signOut(); };
 
   auth.onAuthStateChanged(function (u) {
-    if (u) { ocultarOv(); sincronizar(false); }
+    if (u) { ocultarOv(); if (SIN_CFG) { var st0 = document.getElementById("statusText"); if (st0) { st0.textContent = "Cargando datos…"; st0.style.color = ""; } } sincronizar(false); }
     else { ov.style.display = "flex"; document.documentElement.classList.remove("sin-login"); }
   });
   document.getElementById("formLoginVentas").onsubmit = function (ev) {
