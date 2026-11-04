@@ -9571,7 +9571,7 @@ function LoginGate({
   }, [user]);
 
   // ── Cierre por inactividad ──
-  // (el usuario "ventas" usa el contador dentro de un marco aparte: la actividad ahi no se ve desde aca, asi que no se le cierra la sesion)
+  // (el usuario "ventas" pasa a la pagina del contador: la actividad ahi no se ve desde aca, asi que no se le cierra la sesion)
   useEffect(() => {
     if (!user || soloVentas) return undefined;
     const leer = () => {
@@ -9628,14 +9628,9 @@ function LoginGate({
     };
   }, [user]);
 
-  // El Contador de Ventas (dentro de un marco) avisa cuando se toca "Salir"
+  // Usuario "ventas": al ingresar se lo lleva a la pagina del Contador de Ventas (contador-ventas.html)
   useEffect(() => {
-    if (!soloVentas) return undefined;
-    const h = e => {
-      if (e.origin === window.location.origin && e.data && e.data.cv === "salir") firebase.auth().signOut();
-    };
-    window.addEventListener("message", h);
-    return () => window.removeEventListener("message", h);
+    if (soloVentas) window.location.replace("contador-ventas.html");
   }, [soloVentas]);
 
   // ── Solo lectura: todo bloqueado salvo lo marcado con data-ro-ok (navegar, buscar, descargar, cerrar ventanas) ──
@@ -9884,21 +9879,19 @@ function LoginGate({
       }
     }, cargando ? "Ingresando..." : "Ingresar")));
   }
-
-  // Usuario "ventas": solo ve el Contador de Ventas, con los datos que publica la app
   if (soloVentas) {
-    return /*#__PURE__*/React.createElement("iframe", {
-      title: "Contador de Ventas",
-      src: "contador-ventas.html?app=1",
+    return /*#__PURE__*/React.createElement("div", {
       style: {
-        position: "fixed",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        border: 0,
-        background: "#0F1013"
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0F1013",
+        color: "#8A8D95",
+        fontFamily: "'Montserrat', sans-serif",
+        fontSize: 13
       }
-    });
+    }, "Abriendo el Contador de Ventas...");
   }
   return /*#__PURE__*/React.createElement(SoloLecturaCtx.Provider, {
     value: soloLectura

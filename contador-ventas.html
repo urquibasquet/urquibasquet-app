@@ -9,7 +9,7 @@
 <script data-fb src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script data-fb src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script data-fb src="firebase-config.js"></script>
-<script>(function(){var off=!!window.__CFG_FIJO,h=/[#&]d=/.test(window.location.hash||""),e=false;try{e=window.parent!==window}catch(x){e=true}if(!off&&!h&&!e){document.documentElement.style.visibility="hidden";window.location.replace("index.html");}})();</script>
+<script>(function(){var off=!!window.__CFG_FIJO,h=/[#&]d=/.test(window.location.hash||"");if(!off&&!h){document.documentElement.style.visibility="hidden";setTimeout(function(){document.documentElement.style.visibility="";},6000);}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -190,7 +190,7 @@
 
   .header { justify-content: flex-start !important; flex-wrap: nowrap !important; } .header .titles { margin-right: auto; flex-shrink: 0; } .status-bar { min-width: 0; flex-wrap: wrap; } .btn-salir { white-space: nowrap; flex-shrink: 0; }
   @media (max-width: 700px) { .header { flex-wrap: wrap !important; } .btn-salir { margin-left: auto; } }
-  .btn-salir { background: var(--gris); border: 1px solid var(--rojo); color: var(--rojo); font-weight: 800; font-size: 12px; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .btn-salir { background: transparent; border: 1px solid var(--borde); color: var(--muted); border-radius: 8px; padding: 3px 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; } .btn-salir:hover { color: var(--blanco); border-color: var(--muted); }
   html.sin-login #loginVentas { display: none !important; }
   #loginVentas { position: fixed; inset: 0; z-index: 2000; background: var(--fondo); display: flex; align-items: center; justify-content: center; padding: 20px; }
   #loginVentas .caja { width: 100%; max-width: 340px; }
@@ -227,7 +227,7 @@
       <span>· <strong id="modoVersion">—</strong></span>
       <button class="mini" id="btnActualizar">↻ Actualizar</button>
     </div>
-    <button class="btn-salir" id="btnSalir">⎋ Cerrar sesión</button>
+    <button class="btn-salir" id="btnSalir" title="Cerrar sesión" aria-label="Cerrar sesión"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5.5H7.5v4.5"/><path d="M7.5 14v4.5H13"/><path d="M2.5 12h9.5"/><path d="M9 8.8l3.3 3.2L9 15.2"/><path d="M16 4l5-1.2v18.4L16 20z" fill="currentColor" stroke="none"/></svg></button>
   </div>
 
   <div class="buscador-comprador">
@@ -915,6 +915,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   }
   var stEl = document.getElementById("statusText");
   if (typeof firebase === "undefined" || !window.FIREBASE_CONFIG) {
+    document.documentElement.style.visibility = "";
     if (stEl) { stEl.textContent = "⚠ No se pudo conectar. Revisá la conexión y recargá."; stEl.style.color = "#FF6B6B"; }
     return;
   }
@@ -957,11 +958,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
   }
   if (bAct) bAct.onclick = function () { sincronizar(true); };
-  // Este contador se usa dentro de la app: el cierre de sesion se lo pide a la app.
-  if (bSal) bSal.onclick = function () { try { window.parent.postMessage({ cv: "salir" }, window.location.origin); } catch (e) {} };
+  if (bSal) bSal.onclick = function () { auth.signOut().then(function () { window.location.replace("index.html"); }, function () { window.location.replace("index.html"); }); };
 
+  // Sin sesion => al login de la app. Con sesion => se muestra el contador.
   auth.onAuthStateChanged(function (u) {
-    if (!u) return;
+    if (!u) { window.location.replace("index.html"); return; }
+    document.documentElement.style.visibility = "";
     if (SIN_CFG && stEl) { stEl.textContent = "Cargando datos…"; stEl.style.color = ""; }
     sincronizar(false);
   });
