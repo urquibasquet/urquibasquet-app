@@ -4678,7 +4678,7 @@ function ProductoVentaRow({
     className: "torneo-bebida-row",
     style: {
       display: "grid",
-      gridTemplateColumns: "1.3fr 1fr 1fr 1fr 28px",
+      gridTemplateColumns: "1.3fr 1fr 1fr 1fr 34px",
       gap: 8,
       alignItems: "center",
       marginBottom: 7
@@ -5379,7 +5379,7 @@ function RemeraTabla({
   soloStock
 }) {
   const suma = arr => arr.reduce((a, b) => a + b, 0);
-  const quedan = stock.map((st, i) => st - efe[i] - transf[i]);
+  const vendidas = stock.map((st, i) => (Number(efe[i]) || 0) + (Number(transf[i]) || 0));
   const cols = `minmax(64px, 104px) repeat(${talles.length}, minmax(0, 1fr)) minmax(38px, 54px)`;
   const celda = {
     display: "flex",
@@ -5485,11 +5485,12 @@ function RemeraTabla({
       color: BLANCO,
       fontWeight: 700
     },
-    title: "Se calcula solo: stock menos vendidas"
-  }, "Quedan"), quedan.map((v, i) => {
-    const color = v < 0 ? ROJO : v === 0 ? MUTED : v <= 2 ? AMARILLO : VERDE;
+    title: "Viene del Excel del Contador de Ventas (Importar Excel)"
+  }, "Vendidas"), vendidas.map((v, i) => {
+    const color = v > stock[i] ? ROJO : v === 0 ? MUTED : NARANJA;
     return /*#__PURE__*/React.createElement("div", {
       key: talles[i],
+      title: v > stock[i] ? "Vendiste más de lo que había en stock" : `Stock ${stock[i]} · vendidas ${v}`,
       style: {
         ...celda,
         borderTop: `1px dashed ${BORDE}`,
@@ -5507,12 +5508,20 @@ function RemeraTabla({
       borderTop: `1px dashed ${BORDE}`,
       paddingTop: 8,
       marginTop: 2,
-      color: quedan.reduce((a, b) => a + b, 0) < 0 ? ROJO : BLANCO,
+      color: vendidas.reduce((a, b) => a + b, 0) > stock.reduce((a, b) => a + b, 0) ? ROJO : BLANCO,
       fontSize: 14,
       fontWeight: 800,
       fontFamily: FONT_MONO
     }
-  }, quedan.reduce((a, b) => a + b, 0)));
+  }, vendidas.reduce((a, b) => a + b, 0)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: "1 / -1",
+      color: MUTED,
+      fontSize: 10.5,
+      fontFamily: FONT,
+      lineHeight: 1.4
+    }
+  }, "Las vendidas se cargan solas al importar el Excel del Contador de Ventas (en Ganancia)."));
 }
 
 // ── Compras por confirmar: antigüedad y color del aviso ──
@@ -6063,6 +6072,7 @@ function TorneoPlanner({
     pagado: false
   });
   const [dropSobre, setDropSobre] = useState(null);
+  const [dropLinea, setDropLinea] = useState(null);
   const [tortaModo, setTortaModo] = useState("todo");
   const [gastoAbierto, setGastoAbierto] = useState({});
   const [manualItems, setManualItems] = useState(DEFAULTS.manualItems);
@@ -6337,6 +6347,7 @@ function TorneoPlanner({
     etiqueta: "Kit",
     monto: r.monto,
     momento: c.momento || "antes",
+    orden: c.orden,
     pagado: !!c.pagado,
     canje: !!c.canje,
     falta: r.faltaPrecio,
@@ -6349,6 +6360,7 @@ function TorneoPlanner({
     etiqueta: etqInsumo(it),
     monto: (Number(it.cantidad) || 0) * (Number(it.costo) || 0),
     momento: it.momento || "antes",
+    orden: it.orden,
     pagado: !!it.comprado,
     canje: !!it.canje,
     falta: (Number(it.cantidad) || 0) > 0 && !(Number(it.costo) > 0),
@@ -6362,6 +6374,7 @@ function TorneoPlanner({
     etiqueta: etqManual(it),
     monto: Number(it.precio) || 0,
     momento: it.momento || "antes",
+    orden: it.orden,
     pagado: !!it.pagado,
     canje: !!it.canje,
     falta: !(Number(it.precio) > 0),
@@ -6369,13 +6382,36 @@ function TorneoPlanner({
   }))].map(l => l.canje ? {
     ...l,
     falta: false
-  } : l);
+  } : l).map((l, i) => ({
+    ...l,
+    _o: l.orden != null ? Number(l.orden) : 1e6 + i
+  })).sort((a, b) => a._o - b._o);
   const gastoFaltantes = gastoLineas.filter(l => l.falta);
   const gastoPagado = gastoLineas.filter(l => l.pagado && !l.canje).reduce((a, l) => a + l.monto, 0);
   const valorTotal = gastoLineas.reduce((a, l) => a + l.monto, 0);
   const canjeTotal = gastoLineas.filter(l => l.canje).reduce((a, l) => a + l.monto, 0);
   const nCanje = gastoLineas.filter(l => l.canje).length;
   const pctCanje = canjeTotal > 0 && valorTotal > 0 ? Math.round(canjeTotal / valorTotal * 100) : gastoLineas.length > 0 ? Math.round(nCanje / gastoLineas.length * 100) : 0;
+  function moverLinea(dragKey, blId, targetKey, pos) {
+    const l = gastoLineas.find(x => x.key === dragKey);
+    if (!l) return;
+    const resto = gastoLineas.filter(x => x.momento === blId && x.key !== dragKey);
+    let idx = resto.length;
+    if (targetKey) {
+      const t = resto.findIndex(x => x.key === targetKey);
+      if (t >= 0) idx = pos === "despues" ? t + 1 : t;
+    }
+    const nueva = [...resto.slice(0, idx), l, ...resto.slice(idx)];
+    nueva.forEach((x, i) => {
+      const o = i * 10;
+      if (x.key === dragKey) patchLinea(x, {
+        orden: o,
+        momento: blId
+      });else if (x.orden !== o) patchLinea(x, {
+        orden: o
+      });
+    });
+  }
   function patchLinea(l, p) {
     if (l.origen === "kit") setKitCompras(prev => ({
       ...prev,
@@ -6396,6 +6432,9 @@ function TorneoPlanner({
       } : {}),
       ...("canje" in p ? {
         canje: p.canje
+      } : {}),
+      ...("orden" in p ? {
+        orden: p.orden
       } : {})
     }));else if (l.origen === "man") setManualItems(prev => prev.map((x, i) => i !== l.idx ? x : {
       ...x,
@@ -6932,7 +6971,7 @@ function TorneoPlanner({
           .torneo-bebida-fields { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
           .torneo-bebida-fields input, .torneo-bebida-fields div { font-size: 13px !important; padding: 1px !important; }
           .torneo-bebida-ganancia { background: transparent !important; border: none !important; }
-          .torneo-bebida-fields.torneo-venta-fields { grid-template-columns: 1fr 1fr 1fr 28px !important; align-items: center; }
+          .torneo-bebida-fields.torneo-venta-fields { grid-template-columns: 1fr 1fr 1fr 34px !important; align-items: center; }
 
           /* Insumos: foto ocupa el alto de las 2 líneas (descripción + números), todo bien compacto */
           .torneo-insumo-row {
@@ -7860,7 +7899,7 @@ function TorneoPlanner({
     className: "torneo-table-header",
     style: {
       display: "grid",
-      gridTemplateColumns: "1.3fr 1fr 1fr 1fr 28px",
+      gridTemplateColumns: "1.3fr 1fr 1fr 1fr 34px",
       gap: 8,
       marginBottom: 6
     }
@@ -8207,7 +8246,27 @@ function TorneoPlanner({
       const montoColor = l.falta ? NARANJA : l.canje ? CANJE : l.pagado ? VERDE : BLANCO;
       return /*#__PURE__*/React.createElement("div", {
         key: l.key,
+        onDragOver: e => {
+          e.preventDefault();
+          const r = e.currentTarget.getBoundingClientRect();
+          const pos = e.clientY < r.top + r.height / 2 ? "antes" : "despues";
+          if (!dropLinea || dropLinea.key !== l.key || dropLinea.pos !== pos) setDropLinea({
+            key: l.key,
+            pos
+          });
+        },
+        onDrop: e => {
+          e.preventDefault();
+          e.stopPropagation();
+          const k = e.dataTransfer.getData("text/plain");
+          const r = e.currentTarget.getBoundingClientRect();
+          const pos = e.clientY < r.top + r.height / 2 ? "antes" : "despues";
+          if (k && k !== l.key) moverLinea(k, l.momento, l.key, pos);
+          setDropLinea(null);
+          setDropSobre(null);
+        },
         style: {
+          boxShadow: dropLinea && dropLinea.key === l.key ? dropLinea.pos === "antes" ? `0 -4px 0 0 ${NARANJA}` : `0 4px 0 0 ${NARANJA}` : "none",
           background: l.canje ? `${CANJE}14` : l.pagado ? `${VERDE}14` : GRIS_CLARO,
           border: `1px solid ${l.canje ? CANJE + "66" : l.pagado ? VERDE + "66" : l.falta ? NARANJA + "99" : BORDE}`,
           borderLeft: `5px solid ${col}`,
@@ -8225,13 +8284,17 @@ function TorneoPlanner({
       }, /*#__PURE__*/React.createElement("span", {
         draggable: true,
         className: "torneo-edit-only",
-        title: "Arrastrá para pasarlo al otro bloque",
+        title: "Arrastrá para reordenarlo o pasarlo al otro bloque",
         onDragStart: e => {
           e.dataTransfer.setData("text/plain", l.key);
           e.dataTransfer.effectAllowed = "move";
           try {
             e.dataTransfer.setDragImage(e.currentTarget.parentElement.parentElement, 20, 20);
           } catch {}
+        },
+        onDragEnd: () => {
+          setDropLinea(null);
+          setDropSobre(null);
         },
         style: {
           cursor: "grab",
@@ -8619,16 +8682,18 @@ function TorneoPlanner({
           if (dropSobre !== bl.id) setDropSobre(bl.id);
         },
         onDragLeave: e => {
-          if (!e.currentTarget.contains(e.relatedTarget)) setDropSobre(null);
+          if (!e.currentTarget.contains(e.relatedTarget)) {
+            setDropSobre(null);
+            setDropLinea(null);
+          }
         },
         onDrop: e => {
           e.preventDefault();
           const k = e.dataTransfer.getData("text/plain");
           const l = gastoLineas.find(x => x.key === k);
-          if (l && l.momento !== bl.id) patchLinea(l, {
-            momento: bl.id
-          });
+          if (l && l.momento !== bl.id) moverLinea(k, bl.id, null, "despues");
           setDropSobre(null);
+          setDropLinea(null);
         },
         style: {
           borderRadius: 14,
@@ -8749,7 +8814,8 @@ function TorneoPlanner({
       monto: recaudadoSorteo
     }, {
       etiqueta: "Remeras",
-      monto: ventaRemeras7ma + gananciaJuego
+      monto: ventaRemeras7ma + gananciaJuego,
+      sub: `${r7VendidoEfectivo + r7VendidoTransferencia} de la 7ma · ${rjVendidoEfectivo + rjVendidoTransferencia} de juego`
     }, {
       etiqueta: "Bufet",
       monto: totalVentaProductos
@@ -8817,7 +8883,14 @@ function TorneoPlanner({
         color: BLANCO,
         flex: 1
       }
-    }, d.etiqueta), /*#__PURE__*/React.createElement("span", {
+    }, d.etiqueta, d.sub && /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: "block",
+        color: MUTED,
+        fontSize: 11,
+        fontWeight: 500
+      }
+    }, d.sub, " vendidas")), /*#__PURE__*/React.createElement("span", {
       style: {
         color: MUTED,
         fontSize: 12
