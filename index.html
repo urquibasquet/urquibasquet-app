@@ -6691,31 +6691,34 @@ function TorneoPlanner({
   // Abre el Contador de Ventas ONLINE (pagina contador-ventas.html) mandandole los datos de la app en el enlace:
   // productos del Bufet con su precio, packs del sorteo, stock de remeras y compradores (confirmados y pendientes).
   // Desde esa pagina se puede descargar la version offline.
-  async function descargarContadorVentas() {
-    const w = (() => {
-      try {
-        return window.open("about:blank", "_blank");
-      } catch (e) {
-        return null;
-      }
-    })();
+  const compradoresContadorRef = useRef({});
+  async function refrescarCompradoresContador() {
     try {
-      let compradoresMap = {};
-      try {
-        const snap = await window.__fb.db.collection("comprobantes").get();
-        snap.forEach(doc => {
-          const d = doc.data();
-          if (d.estado === "rechazado") return;
-          compradoresMap[d.codigo] = {
-            nombre: d.nombre,
-            numeros: d.numeros || [],
-            pack: d.pack || "",
-            estado: d.estado || "pendiente"
-          };
-        });
-      } catch (compErr) {
-        console.error("No se pudieron traer los compradores, se abre sin ellos:", compErr);
-      }
+      const snap = await window.__fb.db.collection("comprobantes").get();
+      const m = {};
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (d.estado === "rechazado") return;
+        m[d.codigo] = {
+          nombre: d.nombre,
+          numeros: d.numeros || [],
+          pack: d.pack || "",
+          estado: d.estado || "pendiente"
+        };
+      });
+      compradoresContadorRef.current = m;
+    } catch (e) {
+      console.error("No se pudieron traer los compradores del contador:", e);
+    }
+  }
+  useEffect(() => {
+    if (tab === "ventas") refrescarCompradoresContador();
+  }, [tab]);
+
+  // Abre el Contador de Ventas ONLINE en una pestaña nueva (pagina contador-ventas.html) mandandole los datos
+  // de la app en el enlace. Se abre en el mismo instante del clic (sin esperar nada) para que el navegador no lo bloquee.
+  function descargarContadorVentas() {
+    try {
       const vistos = new Set();
       const gastro = [];
       productosVenta.forEach(p => {
@@ -6753,7 +6756,7 @@ function TorneoPlanner({
           XL: rjXL,
           XXL: rjXXL
         },
-        c: compradoresMap,
+        c: compradoresContadorRef.current || {},
         t: new Date().toISOString()
       };
       const bytes = new TextEncoder().encode(JSON.stringify(cfg));
@@ -6761,12 +6764,11 @@ function TorneoPlanner({
       for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
       const d = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
       const url = new URL("contador-ventas.html", window.location.href).href + "#d=" + d;
-      if (w) w.location.href = url;else window.location.href = url;
+      const w = window.open(url, "_blank");
+      if (!w) window.location.href = url;
+      refrescarCompradoresContador();
     } catch (err) {
       console.error("Error al abrir el Contador de Ventas:", err);
-      try {
-        if (w) w.close();
-      } catch (e) {}
       alert("No se pudo abrir el Contador de Ventas.");
     }
   }
@@ -8781,12 +8783,7 @@ function TorneoPlanner({
     }
   }), /*#__PURE__*/React.createElement("button", {
     "data-ro-ok": "1",
-    onClick: async () => {
-      setDescargandoContador(true);
-      await descargarContadorVentas();
-      setDescargandoContador(false);
-    },
-    disabled: descargandoContador,
+    onClick: () => descargarContadorVentas(),
     className: "cs-btn",
     style: {
       display: "flex",
@@ -8802,7 +8799,7 @@ function TorneoPlanner({
       cursor: "pointer",
       fontFamily: FONT
     }
-  }, "🖩 ", descargandoContador ? "Abriendo..." : "Contador Ventas")), (() => {
+  }, "🖩 Contador Ventas")), (() => {
     const datos = [{
       etiqueta: "Inscripción",
       monto: totalInscripcion
