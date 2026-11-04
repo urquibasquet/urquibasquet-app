@@ -3316,7 +3316,7 @@ function DailySchedule() {
         @page { size: A4 portrait; margin: 10mm; }
         @page itinerario { size: A4 portrait; margin: 14mm; }
         @media print {
-          html, body, #root, #root > div { background: #fff !important; min-height: 0 !important; }
+          html, body, #root, #root > div, .urqui-page-root { background: #fff !important; min-height: 0 !important; }
           .cs-print-only, .cs-print-only * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .cs-app-shell { display: none !important; }
           .cs-print-only { display: block !important; }
@@ -4023,154 +4023,17 @@ function DailySchedule() {
       fontSize: 12,
       lineHeight: 1.6
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 18,
-      fontWeight: 700,
-      marginBottom: 2
-    }
-  }, "CRONOGRAMA — ", fmtDayLabel(date).toUpperCase()), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11
-    }
-  }, "El Urqui Básquet — ", events.length, " actividad", events.length === 1 ? "" : "es", " · Total de horas del evento: ", fmtDuration(busyMinutes)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      marginBottom: 16
-    }
-  }, "Atardecer ", hToClock(getSunData(date).sunsetH)), printChunks.map(([h0, h1], ci) => {
-    const cS = h0 * 60,
-      cE = h1 * 60;
-    return /*#__PURE__*/React.createElement("div", {
-      key: ci,
-      style: {
-        marginBottom: 8,
-        ...(ci < printChunks.length - 1 ? {
-          breakAfter: "page",
-          pageBreakAfter: "always"
-        } : {})
-      }
-    }, ci > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        marginBottom: 6
-      }
-    }, "CRONOGRAMA — ", fmtDayLabel(date).toUpperCase(), " (continuación)"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "relative",
-        display: "flex",
-        height: (h1 - h0) * PRINT_HPX + 1,
-        border: "1px solid #000",
-        fontFamily: "Arial, Helvetica, sans-serif"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 46,
-        flexShrink: 0,
-        position: "relative",
-        borderRight: "1px solid #000",
-        background: "#f0f0f0"
-      }
-    }, Array.from({
-      length: h1 - h0
-    }).map((_, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        position: "absolute",
-        top: i * PRINT_HPX + 2,
-        right: 6,
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, pad(h0 + i), ":00"))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        position: "relative"
-      }
-    }, Array.from({
-      length: h1 - h0
-    }).map((_, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        position: "absolute",
-        top: i * PRINT_HPX,
-        left: 0,
-        right: 0,
-        borderTop: i === 0 ? "none" : "1px solid #999"
-      }
-    })), Array.from({
-      length: h1 - h0
-    }).map((_, i) => /*#__PURE__*/React.createElement("div", {
-      key: "h" + i,
-      style: {
-        position: "absolute",
-        top: i * PRINT_HPX + PRINT_HPX / 2,
-        left: 0,
-        right: 0,
-        borderTop: "1px dashed #ccc"
-      }
-    })), positioned.map(({
-      ev,
-      col,
-      totalCols
-    }) => {
-      const eS = minutesFromTime(ev.start),
-        eE = minutesFromTime(ev.end);
-      if (eE <= cS || eS >= cE) return null;
-      const top = (Math.max(eS, cS) - cS) / 60 * PRINT_HPX;
-      const height = (Math.min(eE, cE) - Math.max(eS, cS)) / 60 * PRINT_HPX;
-      const color = catColor(ev.category);
-      const widthPct = 100 / totalCols;
-      return /*#__PURE__*/React.createElement("div", {
-        key: ev.id,
-        style: {
-          position: "absolute",
-          top: top + 1,
-          height: Math.max(10, height - 2),
-          left: `calc(${col * widthPct}% + 2px)`,
-          width: `calc(${widthPct}% - 4px)`,
-          background: `${color}33`,
-          borderLeft: `4px solid ${color}`,
-          border: `1px solid ${color}`,
-          borderLeftWidth: 4,
-          borderRadius: 3,
-          padding: "1px 5px",
-          overflow: "hidden",
-          boxSizing: "border-box"
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 10.5,
-          fontWeight: 700,
-          lineHeight: 1.15,
-          whiteSpace: height < 44 ? "nowrap" : "pre-line",
-          textOverflow: "ellipsis",
-          overflow: "hidden",
-          wordBreak: "break-word"
-        }
-      }, ev.name), /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 9.5,
-          color: "#333",
-          marginTop: 0,
-          lineHeight: 1.15,
-          whiteSpace: "nowrap"
-        }
-      }, ev.start, "–", ev.end, eS < cS ? " (cont.)" : ""));
-    }))));
-  }), events.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, events.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       page: "itinerario"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      breakBefore: "page",
-      pageBreakBefore: "always",
       fontSize: 14,
       fontWeight: 700,
       marginBottom: 8
     }
-  }, "ITINERARIO"), /*#__PURE__*/React.createElement("div", {
+  }, "ITINERARIO — ", fmtDayLabel(date).toUpperCase()), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid #000",
       marginBottom: 10
@@ -4181,12 +4044,9 @@ function DailySchedule() {
       marginBottom: 10,
       breakInside: "avoid"
     }
-  }, /*#__PURE__*/React.createElement("div", null, fmtHoraHs(ev.start), " (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      whiteSpace: "pre-line"
-    }
-  }, formatForExport(ev.name, catLabel(ev.category).toLowerCase().includes("sorteo"))))), disciplinaEvs.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, fmtHoraHs(ev.start), " (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement(ChecksLineas, {
+    texto: formatForExport(ev.name, catLabel(ev.category).toLowerCase().includes("sorteo"))
+  }))), disciplinaEvs.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 18,
       breakInside: "avoid"
@@ -4207,12 +4067,41 @@ function DailySchedule() {
     style: {
       marginBottom: 10
     }
-  }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]"), /*#__PURE__*/React.createElement(ChecksLineas, {
+    texto: ev.name
+  }))))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
+}
+
+// Impresion: cada renglon del texto lleva adelante un casillero vacio para tildar a mano cuando este hecho
+function ChecksLineas({
+  texto
+}) {
+  const lineas = String(texto || "").split("\n").filter(l => l.trim() !== "");
+  return /*#__PURE__*/React.createElement("div", null, lineas.map((l, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
     style: {
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 8,
       fontWeight: 700,
-      whiteSpace: "pre-line"
+      breakInside: "avoid"
     }
-  }, ev.name))))), events.length === 0 && /*#__PURE__*/React.createElement("div", null, "Sin actividades cargadas para este día.")));
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-block",
+      width: 12,
+      height: 12,
+      border: "1.5px solid #000",
+      borderRadius: 2,
+      marginTop: 3,
+      flexShrink: 0,
+      boxSizing: "border-box"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      whiteSpace: "pre-wrap"
+    }
+  }, l.replace(/^\s{1,}(?=\d+\.)/, "")))));
 }
 function StatChip({
   label,
@@ -11195,6 +11084,7 @@ function UrquiApp() {
   }].filter(v => !soloFixture || v.id === "fixture");
   const [menuAbierto, setMenuAbierto] = useState(false);
   return /*#__PURE__*/React.createElement("div", {
+    className: "urqui-page-root",
     style: {
       minHeight: "100vh",
       background: "#0F1013"
