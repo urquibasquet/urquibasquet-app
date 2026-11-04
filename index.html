@@ -6715,47 +6715,67 @@ function TorneoPlanner({
     if (tab === "ventas") refrescarCompradoresContador();
   }, [tab]);
 
+  // Datos que usa el Contador de Ventas (sin compradores): productos del Bufet con su precio, packs del sorteo y stock de remeras.
+  function cfgContador() {
+    const vistos = new Set();
+    const gastro = [];
+    productosVenta.forEach(p => {
+      const n = String(p.desc || "").trim();
+      if (n && !vistos.has(n.toLowerCase())) {
+        vistos.add(n.toLowerCase());
+        gastro.push({
+          n,
+          p: Number(p.precio) || 0
+        });
+      }
+    });
+    return {
+      g: gastro,
+      p1n: pack1Num,
+      p1p: pack1Precio,
+      p2n: pack2Num,
+      p2p: pack2Precio,
+      p3n: pack3Num,
+      p3p: pack3Precio,
+      tn: totalNumeros,
+      r7: {
+        XS: r7XS,
+        S: r7S,
+        M: r7M,
+        L: r7L,
+        XL: r7XL,
+        XXL: r7XXL
+      },
+      rj: {
+        XS: rjXS,
+        S: rjS,
+        M: rjM,
+        L: rjL,
+        XL: rjXL,
+        XXL: rjXXL
+      }
+    };
+  }
+  // Se deja publicado en Firestore para que quien entre al contador con el usuario "ventas" vea siempre lo ultimo.
+  const cfgContadorTxt = JSON.stringify(cfgContador());
+  useEffect(() => {
+    if (soloLectura) return;
+    const t = setTimeout(() => {
+      try {
+        dbSet("contador-config", cfgContadorTxt);
+      } catch (e) {
+        console.error(e);
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [cfgContadorTxt]);
+
   // Abre el Contador de Ventas ONLINE en una pestaña nueva (pagina contador-ventas.html) mandandole los datos
   // de la app en el enlace. Se abre en el mismo instante del clic (sin esperar nada) para que el navegador no lo bloquee.
   function descargarContadorVentas() {
     try {
-      const vistos = new Set();
-      const gastro = [];
-      productosVenta.forEach(p => {
-        const n = String(p.desc || "").trim();
-        if (n && !vistos.has(n.toLowerCase())) {
-          vistos.add(n.toLowerCase());
-          gastro.push({
-            n,
-            p: Number(p.precio) || 0
-          });
-        }
-      });
       const cfg = {
-        g: gastro,
-        p1n: pack1Num,
-        p1p: pack1Precio,
-        p2n: pack2Num,
-        p2p: pack2Precio,
-        p3n: pack3Num,
-        p3p: pack3Precio,
-        tn: totalNumeros,
-        r7: {
-          XS: r7XS,
-          S: r7S,
-          M: r7M,
-          L: r7L,
-          XL: r7XL,
-          XXL: r7XXL
-        },
-        rj: {
-          XS: rjXS,
-          S: rjS,
-          M: rjM,
-          L: rjL,
-          XL: rjXL,
-          XXL: rjXXL
-        },
+        ...cfgContador(),
         c: compradoresContadorRef.current || {},
         t: new Date().toISOString()
       };
