@@ -2510,6 +2510,11 @@ function minutesFromTime(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 }
+// "16:00" -> "16hs", "16:30" -> "16:30hs" (para el itinerario impreso)
+function fmtHoraHs(t) {
+  const [h, m] = String(t).split(":");
+  return (parseInt(h, 10) || 0) + (m && parseInt(m, 10) ? ":" + m : "") + "hs";
+}
 function fmtDuration(mins) {
   if (mins <= 0) return "0m";
   const h = Math.floor(mins / 60),
@@ -3208,7 +3213,7 @@ function DailySchedule() {
 
   // Vista de impresión: la misma grilla (horas a la izquierda, actividades en paralelo), partida en hojas de PRINT_CHUNK horas
   const PRINT_HPX = 120,
-    PRINT_CHUNK = 5;
+    PRINT_CHUNK = 7;
   const printChunks = useMemo(() => {
     if (!events.length) return [];
     const from = Math.floor(Math.min(...events.map(e => minutesFromTime(e.start))) / 60);
@@ -3308,7 +3313,7 @@ function DailySchedule() {
           .cs-btn-row > button { flex: 1 1 0; }
         }
         .cs-print-only { display: none; }
-        @page { size: A4 landscape; margin: 10mm; }
+        @page { size: A4 portrait; margin: 10mm; }
         @page itinerario { size: A4 portrait; margin: 14mm; }
         @media print {
           html, body, #root, #root > div { background: #fff !important; min-height: 0 !important; }
@@ -4176,7 +4181,7 @@ function DailySchedule() {
       marginBottom: 10,
       breakInside: "avoid"
     }
-  }, /*#__PURE__*/React.createElement("div", null, ev.start, " - ", ev.end, "   [", fmtDuration(minutesFromTime(ev.end) - minutesFromTime(ev.start)), "]   (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, fmtHoraHs(ev.start), " (", catLabel(ev.category), ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
       whiteSpace: "pre-line"
