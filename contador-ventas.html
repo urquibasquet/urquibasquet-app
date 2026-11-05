@@ -187,6 +187,17 @@
     padding: 9px 16px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
   }
   .toast.show { opacity: 1; }
+  #overlayTotales .caja { max-width: 440px; max-height: 92vh; overflow-y: auto; }
+  .tot-sec { font-size: 11px; font-weight: 800; color: var(--naranja); text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 4px; padding-top: 10px; border-top: 1px solid var(--borde); }
+  .tot-head, .tot-fila { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 6px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+  .tot-head { color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; }
+  .tot-fila { border-bottom: 1px solid var(--borde); }
+  .tot-fila .lab { font-weight: 700; color: var(--blanco); }
+  .tot-fila .met { color: var(--blanco); font-weight: 800; }
+  .tot-fila .met small { display: block; color: var(--muted); font-weight: 600; font-size: 10.5px; }
+  .tot-fila .met.cero { color: var(--muted); font-weight: 600; }
+  .tot-simple { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12.5px; }
+  .tot-simple strong { color: var(--blanco); }
 
   .header { justify-content: flex-start !important; flex-wrap: nowrap !important; } .header .titles { margin-right: auto; flex-shrink: 0; } .status-bar { min-width: 0; flex-wrap: wrap; } .btn-salir { white-space: nowrap; flex-shrink: 0; }
   @media (max-width: 700px) { .header { flex-wrap: wrap !important; } .btn-salir { margin-left: auto; } }
@@ -225,7 +236,8 @@
     </div>
     <div id="totPaso2" style="display:none;">
       <h3>Total vendido</h3>
-      <div id="totMonto" style="font-size:40px;font-weight:800;color:var(--verde);margin:14px 0 20px;"></div>
+      <div id="totMonto" style="font-size:40px;font-weight:800;color:var(--verde);margin:10px 0 14px;"></div>
+      <div id="totDetalle" style="text-align:left;margin-bottom:14px;"></div>
       <button class="btn-cancelar-metodo" id="btnTotCerrar">Cerrar</button>
     </div>
   </div>
@@ -741,6 +753,40 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     });
     return t;
   }
+  function celdaMet(n, monto) {
+    return '<div class="met' + (n > 0 ? '' : ' cero') + '">' + n + (n > 0 ? '<small>' + fmtPrecio(monto) + '</small>' : '') + '</div>';
+  }
+  function filaMet(label, e, t, pe, pt) {
+    return '<div class="tot-fila"><div class="lab">' + label + '</div>' + celdaMet(e, e * pe) + celdaMet(t, t * pt) + '</div>';
+  }
+  var CAB_MET = '<div class="tot-head"><div></div><div>💵 Efectivo</div><div>💳 Transferencia</div></div>';
+  function detalleTotales() {
+    var PR = CFG.pr || {};
+    var html = "";
+    // Gastronomia
+    var gastro = 0;
+    GASTRO_DATA.forEach(function (x) { gastro += (estado.gastro[x.n] || 0) * (x.p || 0); });
+    html += '<div class="tot-sec">Gastronomía</div><div class="tot-simple"><span>Total</span><strong>' + fmtPrecio(gastro) + '</strong></div>';
+    // Sorteo: por pack, en efectivo y en transferencia
+    var precioPack = { "Pack 1": PACK1_PRECIO, "Pack 2": PACK2_PRECIO, "Pack 3": PACK3_PRECIO };
+    html += '<div class="tot-sec">Sorteo</div>' + CAB_MET;
+    SORTEO_ITEMS.forEach(function (p) {
+      var m = estado.sorteoMetodo[p] || { efectivo: 0, transferencia: 0 };
+      html += filaMet(p, m.efectivo, m.transferencia, precioPack[p] || 0, precioPack[p] || 0);
+    });
+    // Remeras: por talle
+    function remeras(titulo, grupoMetodo, pe, pt) {
+      var filas = "";
+      TALLES.forEach(function (n) {
+        var m = estado[grupoMetodo][n] || { efectivo: 0, transferencia: 0 };
+        if (m.efectivo + m.transferencia > 0) filas += filaMet("Talle " + n, m.efectivo, m.transferencia, pe, pt);
+      });
+      return '<div class="tot-sec">' + titulo + '</div>' + (filas ? CAB_MET + filas : '<div class="tot-simple"><span>Sin ventas</span></div>');
+    }
+    html += remeras("Remeras algodón (7ma)", "remerasAlgodonMetodo", PR.e7 || 0, PR.t7 || 0);
+    html += remeras("Remeras de juego", "remerasJuegoMetodo", PR.ej || 0, PR.tj || 0);
+    return html;
+  }
   var overlayTotales = document.getElementById("overlayTotales");
   function cerrarTotales() { overlayTotales.classList.remove("show"); document.getElementById("totClave").value = ""; }
   document.getElementById("btnTotales").onclick = function () {
@@ -755,6 +801,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     var ing = document.getElementById("totClave").value.replace(/\s+/g, "").toLowerCase();
     if (CLAVES_TOTALES.indexOf(ing) < 0) { document.getElementById("totError").textContent = "Contraseña incorrecta"; return; }
     document.getElementById("totMonto").textContent = fmtPrecio(totalVendido());
+    document.getElementById("totDetalle").innerHTML = detalleTotales();
     document.getElementById("totPaso1").style.display = "none";
     document.getElementById("totPaso2").style.display = "";
     document.getElementById("totClave").value = "";
