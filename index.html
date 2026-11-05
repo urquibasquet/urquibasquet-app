@@ -5895,6 +5895,7 @@ function TorneoPlanner({
   const [pack1Num, setPack1Num] = useState(DEFAULTS.pack1Num);
   const [pack1Precio, setPack1Precio] = useState(DEFAULTS.pack1Precio);
   const [pack1Vendidos, setPack1Vendidos] = useState(DEFAULTS.pack1Vendidos);
+  const [sorteoEfeTransf, setSorteoEfeTransf] = useState({}); // por pack: { efe, transf } (viene del Excel del Contador de Ventas)
   const [pack2Num, setPack2Num] = useState(DEFAULTS.pack2Num);
   const [pack2Precio, setPack2Precio] = useState(DEFAULTS.pack2Precio);
   const [pack2Vendidos, setPack2Vendidos] = useState(DEFAULTS.pack2Vendidos);
@@ -5982,6 +5983,7 @@ function TorneoPlanner({
         const result = await dbGet(STORAGE_KEY);
         if (result && result.value) {
           const d = JSON.parse(result.value);
+          if (d.sorteoEfeTransf !== undefined) setSorteoEfeTransf(d.sorteoEfeTransf);
           if (d.pack1Num !== undefined) {
             setPack1Num(d.pack1Num);
             setPack1Precio(d.pack1Precio);
@@ -6121,6 +6123,7 @@ function TorneoPlanner({
     pack1Num,
     pack1Precio,
     pack1Vendidos,
+    sorteoEfeTransf,
     pack2Num,
     pack2Precio,
     pack2Vendidos,
@@ -6162,7 +6165,7 @@ function TorneoPlanner({
     manualItems,
     insumoItems,
     checklistItems
-  }), [kitCompras, remerasMeta, productosVenta, pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, totalNumeros, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, r7EfeTalla, r7TransfTalla, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, rjEfeTalla, rjTransfTalla, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
+  }), [kitCompras, remerasMeta, productosVenta, pack1Num, pack1Precio, pack1Vendidos, pack2Num, pack2Precio, pack2Vendidos, pack3Num, pack3Precio, pack3Vendidos, sorteoEfeTransf, totalNumeros, cantPremios, equipos, precioPorEquipo, r7XS, r7S, r7M, r7L, r7XL, r7XXL, precioTransferencia7ma, precioEfectivo7ma, r7EfeTalla, r7TransfTalla, fotoRemera7ma, precioTransferenciaJuego, precioEfectivoJuego, rjEfeTalla, rjTransfTalla, fotoRemeraJuego, rjXS, rjS, rjM, rjL, rjXL, rjXXL, porcionesChoris, costoChoripan, precioChoripan, aporteSponsor, capitalInicial, kitItems, manualItems, insumoItems, checklistItems, porcionesHamburguesas, costoHamburguesa, precioHamburguesa, fernet500Precio, fernet500Cant, fernet1LPrecio, fernet1LCant, amargo500Precio, amargo500Cant, amargo1LPrecio, amargo1LCant, gaseosaBeb500Precio, gaseosaBeb500Cant, gaseosaBeb1LPrecio, gaseosaBeb1LCant]);
   useEffect(() => {
     if (!loaded) return;
     setSaveStatus("saving");
@@ -6585,29 +6588,6 @@ function TorneoPlanner({
   // Abre el Contador de Ventas ONLINE (pagina contador-ventas.html) mandandole los datos de la app en el enlace:
   // productos del Bufet con su precio, packs del sorteo, stock de remeras y compradores (confirmados y pendientes).
   // Desde esa pagina se puede descargar la version offline.
-  const compradoresContadorRef = useRef({});
-  async function refrescarCompradoresContador() {
-    try {
-      const snap = await window.__fb.db.collection("comprobantes").get();
-      const m = {};
-      snap.forEach(doc => {
-        const d = doc.data();
-        if (d.estado === "rechazado") return;
-        m[d.codigo] = {
-          nombre: d.nombre,
-          numeros: d.numeros || [],
-          pack: d.pack || "",
-          estado: d.estado || "pendiente"
-        };
-      });
-      compradoresContadorRef.current = m;
-    } catch (e) {
-      console.error("No se pudieron traer los compradores del contador:", e);
-    }
-  }
-  useEffect(() => {
-    if (tab === "ventas") refrescarCompradoresContador();
-  }, [tab]);
 
   // Datos que usa el Contador de Ventas (sin compradores): productos del Bufet con su precio, packs del sorteo y stock de remeras.
   function cfgContador() {
@@ -6647,7 +6627,13 @@ function TorneoPlanner({
         L: rjL,
         XL: rjXL,
         XXL: rjXXL
-      }
+      },
+      pr: {
+        e7: precioEfectivo7ma,
+        t7: precioTransferencia7ma,
+        ej: precioEfectivoJuego,
+        tj: precioTransferenciaJuego
+      } // precios de las remeras (para el total)
     };
   }
   // Se deja publicado en Firestore para que quien entre al contador con el usuario "ventas" vea siempre lo ultimo.
@@ -6670,7 +6656,6 @@ function TorneoPlanner({
     try {
       const cfg = {
         ...cfgContador(),
-        c: compradoresContadorRef.current || {},
         t: new Date().toISOString()
       };
       const bytes = new TextEncoder().encode(JSON.stringify(cfg));
@@ -6680,7 +6665,6 @@ function TorneoPlanner({
       const url = new URL("contador-ventas.html", window.location.href).href + "#d=" + d;
       const w = window.open(url, "_blank");
       if (!w) window.location.href = url;
-      refrescarCompradoresContador();
     } catch (err) {
       console.error("Error al abrir el Contador de Ventas:", err);
       alert("No se pudo abrir el Contador de Ventas.");
@@ -6718,9 +6702,16 @@ function TorneoPlanner({
           const rows = window.XLSX.utils.sheet_to_json(wb.Sheets["Sorteo"], {
             header: 1
           });
-          rows.slice(1).forEach(([nombre, cant]) => {
+          const efeTransf = {};
+          rows.slice(1).forEach(([nombre, cant, e, t]) => {
             if (mapaSorteo[nombre] && Number.isFinite(Number(cant))) mapaSorteo[nombre](Number(cant));
+            const num = v => v === undefined || v === null || v === "" ? NaN : Number(v);
+            if (mapaSorteo[nombre] && Number.isFinite(num(e)) && Number.isFinite(num(t))) efeTransf[nombre] = {
+              efe: num(e),
+              transf: num(t)
+            };
           });
+          setSorteoEfeTransf(efeTransf);
         }
 
         // Ventas de remeras por talle y por metodo de pago. El Contador de Ventas lleva el acumulado del
@@ -8719,7 +8710,24 @@ function TorneoPlanner({
       monto: totalInscripcion
     }, {
       etiqueta: "Sorteo",
-      monto: recaudadoSorteo
+      monto: recaudadoSorteo,
+      ...(() => {
+        const pr = {
+          "Pack 1": pack1Precio,
+          "Pack 2": pack2Precio,
+          "Pack 3": pack3Precio
+        };
+        let ef = 0,
+          tr = 0;
+        Object.keys(sorteoEfeTransf || {}).forEach(k => {
+          ef += (sorteoEfeTransf[k].efe || 0) * (pr[k] || 0);
+          tr += (sorteoEfeTransf[k].transf || 0) * (pr[k] || 0);
+        });
+        return ef + tr > 0 ? {
+          sub: `${fmt(ef)} efectivo · ${fmt(tr)} transferencia`,
+          subFin: ""
+        } : {};
+      })()
     }, {
       etiqueta: "Remeras",
       monto: ventaRemeras7ma + gananciaJuego,
@@ -8798,7 +8806,7 @@ function TorneoPlanner({
         fontSize: 11,
         fontWeight: 500
       }
-    }, d.sub, " vendidas")), /*#__PURE__*/React.createElement("span", {
+    }, d.sub, d.subFin === undefined ? " vendidas" : d.subFin)), /*#__PURE__*/React.createElement("span", {
       style: {
         color: MUTED,
         fontSize: 12

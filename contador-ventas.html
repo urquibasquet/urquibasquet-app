@@ -213,6 +213,23 @@
     <button class="btn-cancelar-metodo" id="btnMetodoCancelar">Cancelar</button>
   </div>
 </div>
+<div class="overlay-metodo" id="overlayTotales">
+  <div class="caja">
+    <div id="totPaso1">
+      <h3>Totales</h3>
+      <p>Ingresá la contraseña</p>
+      <input type="password" id="totClave" autocomplete="off" style="width:100%;background:var(--negro);border:1px solid var(--borde);border-radius:8px;color:var(--blanco);padding:12px;font-size:15px;text-align:center;outline:none;margin-bottom:8px;" />
+      <div id="totError" style="color:var(--rojo);font-size:12px;min-height:16px;margin-bottom:8px;"></div>
+      <button class="btn-metodo btn-efectivo" id="btnTotEntrar">Ver total</button>
+      <button class="btn-cancelar-metodo" id="btnTotCancelar">Cancelar</button>
+    </div>
+    <div id="totPaso2" style="display:none;">
+      <h3>Total vendido</h3>
+      <div id="totMonto" style="font-size:40px;font-weight:800;color:var(--verde);margin:14px 0 20px;"></div>
+      <button class="btn-cancelar-metodo" id="btnTotCerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
 <div class="wrap">
 
   <div class="header">
@@ -223,19 +240,12 @@
     <div class="status-bar">
       <span id="statusText">Guardado automáticamente ✓</span>
       <span>· <strong id="lastSaved">—</strong></span>
-      <span>· <strong id="infoCompradores">—</strong></span>
       <span>· <strong id="modoVersion">—</strong></span>
       <button class="mini" id="btnActualizar">↻ Actualizar</button>
     </div>
     <button class="btn-salir" id="btnSalir" title="Cerrar sesión" aria-label="Cerrar sesión"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5.5H7.5v4.5"/><path d="M7.5 14v4.5H13"/><path d="M2.5 12h9.5"/><path d="M9 8.8l3.3 3.2L9 15.2"/><path d="M16 4l5-1.2v18.4L16 20z" fill="currentColor" stroke="none"/></svg></button>
   </div>
 
-  <div class="buscador-comprador">
-    <input type="text" id="inputBuscarCodigo" placeholder="CÓDIGO DEL COMPRADOR" style="text-transform:uppercase;" />
-    <button class="btn-limpiar-codigo" id="btnLimpiarBusqueda" title="Limpiar búsqueda">✕</button>
-    <button class="btn-buscar-codigo" id="btnBuscarComprador">🔍 Buscar</button>
-  </div>
-  <div id="resultadosBusqueda"></div>
 
   <div class="rows">
     <div class="row1">
@@ -267,8 +277,7 @@
   <div class="footer-actions">
     <button class="btn-action" id="btnDescargar">📊 Descargar Excel</button>
     <button class="btn-action secondary" id="btnOffline">⬇ Descargar versión offline</button>
-    <button class="btn-action secondary" id="btnImportarCompradores">📥 Importar compradores</button>
-    <input type="file" accept=".xlsx,.xls" id="inputImportarCompradores" style="display:none;" />
+    <button class="btn-action secondary" id="btnTotales">💰 Totales</button>
     <button class="btn-action secondary" id="btnReset">↺ Reiniciar todo a cero</button>
   </div>
 
@@ -372,6 +381,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     return o;
   }
 
+  // Si habia packs cargados antes de que se guardara el metodo de pago, lo que falta se toma como efectivo.
+  function migrarSorteoMetodo(conteos, metodos) {
+    Object.keys(conteos).forEach(function (p) {
+      var m = metodos[p] || (metodos[p] = { efectivo: 0, transferencia: 0 });
+      var falta = (conteos[p] || 0) - (m.efectivo + m.transferencia);
+      if (falta > 0) m.efectivo += falta;
+    });
+    return metodos;
+  }
+
   function cargarEstado() {
     try {
       var raw = window.localStorage.getItem(STORAGE_KEY);
@@ -382,6 +401,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           sorteo: Object.assign({}, ceros(SORTEO_ITEMS), parsed.sorteo || {}),
           remerasAlgodon: Object.assign({}, ceros(TALLES), parsed.remerasAlgodon || {}),
           remerasJuego: Object.assign({}, ceros(TALLES), parsed.remerasJuego || {}),
+          sorteoMetodo: migrarSorteoMetodo(Object.assign({}, ceros(SORTEO_ITEMS), parsed.sorteo || {}), Object.assign({}, cerosMetodo(SORTEO_ITEMS), parsed.sorteoMetodo || {})),
           remerasAlgodonMetodo: Object.assign({}, cerosMetodo(TALLES), parsed.remerasAlgodonMetodo || {}),
           remerasJuegoMetodo: Object.assign({}, cerosMetodo(TALLES), parsed.remerasJuegoMetodo || {}),
         };
@@ -390,6 +410,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     return {
       gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS),
       remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES),
+      sorteoMetodo: cerosMetodo(SORTEO_ITEMS),
       remerasAlgodonMetodo: cerosMetodo(TALLES), remerasJuegoMetodo: cerosMetodo(TALLES),
     };
   }
@@ -426,7 +447,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     actualizarResumenSorteo();
   }
 
-  var METODO_MAPS = { remerasAlgodon: "remerasAlgodonMetodo", remerasJuego: "remerasJuegoMetodo" };
+  var METODO_MAPS = { sorteo: "sorteoMetodo", remerasAlgodon: "remerasAlgodonMetodo", remerasJuego: "remerasJuegoMetodo" };
 
   // Suma o resta una venta de remera, guardando ademas a que metodo de pago corresponde.
   function cambiarConMetodo(grupo, nombre, metodo, delta) {
@@ -479,7 +500,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
     // Si ya no queda stock de esa talla, no tiene sentido preguntar el metodo de pago:
     // se avisa con un cartel y no se suma nada.
-    if (delta > 0) {
+    if (delta > 0 && STOCK_MAPS[grupo]) {
       var stockMap = STOCK_MAPS[grupo];
       var restante = (stockMap ? (stockMap[nombre] || 0) : 0) - (estado[grupo][nombre] || 0);
       if (restante <= 0) { mostrarSinStock(grupo, nombre); return; }
@@ -527,7 +548,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   function slug(s) { return s.replace(/[^a-zA-Z0-9]/g, "_"); }
 
-  function renderLista(contenedorId, grupo, lista, precios, stockMap, conMetodo) {
+  function renderLista(contenedorId, grupo, lista, precios, stockMap, conMetodo, sinLeyenda) {
     var cont = document.getElementById(contenedorId);
     lista.forEach(function (nombre) {
       var row = document.createElement("div");
@@ -565,7 +586,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         textWrap.appendChild(stockEl);
       }
 
-      if (conMetodo) {
+      if (conMetodo && !sinLeyenda) {
         var leyendaEl = document.createElement("div");
         leyendaEl.className = "item-metodo-leyenda";
         leyendaEl.id = "metodo-" + grupo + "-" + slug(nombre);
@@ -592,12 +613,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       row.appendChild(btnPlus);
       cont.appendChild(row);
 
-      if (conMetodo) actualizarLeyendaMetodo(grupo, nombre);
+      if (conMetodo && !sinLeyenda) actualizarLeyendaMetodo(grupo, nombre);
     });
   }
 
   renderLista("gastroList", "gastro", GASTRO_ITEMS, GASTRO_PRECIOS);
-  renderLista("sorteoList", "sorteo", SORTEO_ITEMS, SORTEO_PRECIOS);
+  renderLista("sorteoList", "sorteo", SORTEO_ITEMS, SORTEO_PRECIOS, null, true, true); // pregunta efectivo/transferencia pero no lo muestra
   renderLista("remerasAlgodonList", "remerasAlgodon", TALLES, null, STOCK_ALGODON, true);
   renderLista("remerasJuegoList", "remerasJuego", TALLES, null, STOCK_JUEGO, true);
 
@@ -636,10 +657,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     wsGastro["!cols"] = [{ wch: 22 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsGastro, "Gastronomia");
 
-    var filasSorteo = [["Pack", "Packs vendidos"]];
-    SORTEO_ITEMS.forEach(function (n) { filasSorteo.push([n, estado.sorteo[n] || 0]); });
+    var filasSorteo = [["Pack", "Packs vendidos", "Efectivo", "Transferencia"]];
+    SORTEO_ITEMS.forEach(function (n) {
+      var m = estado.sorteoMetodo[n] || { efectivo: 0, transferencia: 0 };
+      filasSorteo.push([n, estado.sorteo[n] || 0, m.efectivo, m.transferencia]);
+    });
     var wsSorteo = XLSX.utils.aoa_to_sheet(filasSorteo);
-    wsSorteo["!cols"] = [{ wch: 14 }, { wch: 16 }];
+    wsSorteo["!cols"] = [{ wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsSorteo, "Sorteo");
 
     var filasRemAlg = [["Talle", "Remeras vendidas", "Efectivo", "Transferencia"]];
@@ -675,6 +699,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     estado = {
       gastro: ceros(GASTRO_ITEMS), sorteo: ceros(SORTEO_ITEMS),
       remerasAlgodon: ceros(TALLES), remerasJuego: ceros(TALLES),
+      sorteoMetodo: cerosMetodo(SORTEO_ITEMS),
       remerasAlgodonMetodo: cerosMetodo(TALLES), remerasJuegoMetodo: cerosMetodo(TALLES),
     };
     GASTRO_ITEMS.forEach(function (n) { document.getElementById("count-gastro-" + slug(n)).textContent = 0; });
@@ -701,171 +726,44 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     } catch (e) {}
   })();
 
-  // ── Buscador de comprador (por codigo, para entregar los numeros fisicos) ──
-  var COMPRADORES_KEY = "urqui-contador-compradores";
-  // Estos vienen ya cargados desde la app al descargar el archivo (compradores confirmados a esa fecha)
-  var COMPRADORES_INICIALES = CFG.c;
-  var DESCARGADO_EN = (CFG.t || "");
-  var compradores = {};
-
-  function guardarCompradores() {
-    try { window.localStorage.setItem(COMPRADORES_KEY, JSON.stringify(compradores)); }
-    catch (e) { console.error("No se pudo guardar el estado de entrega:", e); }
-  }
-
-  // Los compradores que trajo ESTA descarga son la verdad (asi un pago pasa de "sin confirmar" a "confirmado", y las compras
-  // que ya no existen en la app no siguen apareciendo). De lo guardado en el navegador solo se conserva la marca de "entregado"
-  // y lo que se cargo a mano desde un Excel. La memoria del navegador se comparte entre copias del Contador: por eso no se mezcla.
-  (function () {
-    var guardados = {};
-    try {
-      var raw = window.localStorage.getItem(COMPRADORES_KEY);
-      if (raw) guardados = JSON.parse(raw) || {};
-    } catch (e) { console.error("No se pudo leer la lista de compradores:", e); }
-    Object.keys(COMPRADORES_INICIALES).forEach(function (cod) {
-      var c = Object.assign({}, COMPRADORES_INICIALES[cod]);
-      c.entregado = !!(guardados[cod] && guardados[cod].entregado);
-      compradores[cod] = c;
+  // ── Totales (con contraseña) ──
+  var CLAVES_TOTALES = ["urqui123", "urki123"];
+  function totalVendido() {
+    var t = 0;
+    GASTRO_DATA.forEach(function (x) { t += (estado.gastro[x.n] || 0) * (x.p || 0); });
+    var precioPack = { "Pack 1": PACK1_PRECIO, "Pack 2": PACK2_PRECIO, "Pack 3": PACK3_PRECIO };
+    SORTEO_ITEMS.forEach(function (p) { t += (estado.sorteo[p] || 0) * (precioPack[p] || 0); });
+    var PR = CFG.pr || {};
+    TALLES.forEach(function (n) {
+      var a = estado.remerasAlgodonMetodo[n] || { efectivo: 0, transferencia: 0 };
+      var j = estado.remerasJuegoMetodo[n] || { efectivo: 0, transferencia: 0 };
+      t += a.efectivo * (PR.e7 || 0) + a.transferencia * (PR.t7 || 0) + j.efectivo * (PR.ej || 0) + j.transferencia * (PR.tj || 0);
     });
-    Object.keys(guardados).forEach(function (cod) {
-      if (!compradores[cod] && guardados[cod] && guardados[cod].origen === "importado") compradores[cod] = guardados[cod];
-    });
-    guardarCompradores();
-  })();
-
-  // Dice a simple vista con que datos de compradores esta trabajando este archivo.
-  function mostrarInfoCompradores() {
-    var el = document.getElementById("infoCompradores");
-    if (!el) return;
-    var n = Object.keys(compradores).length;
-    var txt = n + (n === 1 ? " comprador" : " compradores");
-    if (DESCARGADO_EN && DESCARGADO_EN.indexOf("__") !== 0) {
-      var d = new Date(DESCARGADO_EN);
-      if (!isNaN(d.getTime())) {
-        var p2 = function (x) { return (x < 10 ? "0" : "") + x; };
-        txt += " (datos al " + p2(d.getDate()) + "/" + p2(d.getMonth() + 1) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + ")";
-      }
-    }
-    el.textContent = txt;
+    return t;
   }
-  mostrarInfoCompradores();
-
-  function sufijo(codigo) {
-    return codigo.replace(/^URQ-?/, "").toUpperCase();
-  }
-
-  function buscarYRenderizar() {
-    var query = document.getElementById("inputBuscarCodigo").value.trim().toUpperCase();
-    var cont = document.getElementById("resultadosBusqueda");
-    cont.innerHTML = "";
-    if (!query) return;
-
-    var coincidencias = Object.keys(compradores).filter(function (codigo) {
-      var c = compradores[codigo];
-      return sufijo(codigo).indexOf(query) !== -1 ||
-        codigo.toUpperCase().indexOf(query) !== -1 ||
-        (c.nombre || "").toUpperCase().indexOf(query) !== -1;
-    }).slice(0, 8);
-
-    if (coincidencias.length === 0) {
-      var filaVacia = document.createElement("div");
-      filaVacia.className = "fila-resultado sin-resultado";
-      filaVacia.innerHTML = '<div class="info-comprador">No encontramos ningún código ni nombre que coincida.</div>';
-      cont.appendChild(filaVacia);
-      return;
-    }
-
-    coincidencias.forEach(function (codigo) {
-      var comprador = compradores[codigo];
-      var entregado = !!comprador.entregado;
-      var esPendiente = comprador.estado === "pendiente";
-      var fila = document.createElement("div");
-      fila.className = "fila-resultado" + (entregado ? " entregado" : "") + (esPendiente ? " pendiente" : "");
-
-      var botonHtml = esPendiente
-        ? '<button class="btn-entregado btn-pendiente-aviso" disabled>⏳ Sin confirmar</button>'
-        : '<button class="btn-entregado' + (entregado ? ' ya-entregado' : '') + '">' + (entregado ? '✓ Entregado' : 'Entregado') + '</button>';
-
-      fila.innerHTML =
-        '<div class="info-comprador">' +
-          '<div class="nombre-comprador">' + comprador.nombre + '</div>' +
-          '<div class="pack-comprador">' + (comprador.pack || "") + ' · ' + codigo +
-            (esPendiente ? ' · <span style="color:var(--amarillo)">pago sin confirmar todavía</span>' : '') + '</div>' +
-          '<div class="numeros-comprador">' + comprador.numeros.join("  ·  ") + '</div>' +
-        '</div>' +
-        botonHtml;
-
-      if (!esPendiente) {
-        fila.querySelector(".btn-entregado").onclick = function () {
-          var marcandoComoEntregado = !compradores[codigo].entregado;
-          compradores[codigo].entregado = marcandoComoEntregado;
-          guardarCompradores();
-          if (marcandoComoEntregado) {
-            // Se confirma visualmente y despues se desvanece solo — si hace falta un rollback,
-            // se vuelve a buscar el mismo codigo/nombre y aparece de nuevo para destildarlo.
-            fila.querySelector(".btn-entregado").className = "btn-entregado ya-entregado";
-            fila.querySelector(".btn-entregado").textContent = "✓ Entregado";
-            fila.classList.add("entregado");
-            setTimeout(function () { fila.classList.add("desvaneciendo"); }, 900);
-            setTimeout(function () { if (fila.parentNode) fila.parentNode.removeChild(fila); }, 2400);
-          } else {
-            buscarYRenderizar();
-          }
-        };
-      }
-      cont.appendChild(fila);
-    });
-  }
-
-  document.getElementById("inputBuscarCodigo").addEventListener("input", buscarYRenderizar);
-  document.getElementById("btnBuscarComprador").onclick = buscarYRenderizar;
-  document.getElementById("inputBuscarCodigo").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") buscarYRenderizar();
-  });
-  document.getElementById("btnLimpiarBusqueda").onclick = () => {
-    document.getElementById("inputBuscarCodigo").value = "";
-    document.getElementById("resultadosBusqueda").innerHTML = "";
-    document.getElementById("inputBuscarCodigo").focus();
+  var overlayTotales = document.getElementById("overlayTotales");
+  function cerrarTotales() { overlayTotales.classList.remove("show"); document.getElementById("totClave").value = ""; }
+  document.getElementById("btnTotales").onclick = function () {
+    document.getElementById("totPaso1").style.display = "";
+    document.getElementById("totPaso2").style.display = "none";
+    document.getElementById("totError").textContent = "";
+    document.getElementById("totClave").value = "";
+    overlayTotales.classList.add("show");
+    setTimeout(function () { document.getElementById("totClave").focus(); }, 50);
   };
-
-  document.getElementById("btnImportarCompradores").onclick = () => document.getElementById("inputImportarCompradores").click();
-  document.getElementById("inputImportarCompradores").onchange = (e) => {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        var wb = XLSX.read(evt.target.result, { type: "array" });
-        var hoja = wb.Sheets["Compradores"];
-        if (!hoja) throw new Error("El Excel no tiene una hoja llamada Compradores.");
-        var filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
-        var nuevos = {};
-        filas.slice(1).forEach(function (fila) {
-          var codigo = fila[0], nombre = fila[1], numerosTxt = fila[2], pack = fila[3];
-          if (!codigo) return;
-          var codigoUpper = String(codigo).toUpperCase();
-          var entregadoPrevio = compradores[codigoUpper] ? compradores[codigoUpper].entregado : false;
-          nuevos[codigoUpper] = {
-            nombre: nombre || "",
-            numeros: numerosTxt ? String(numerosTxt).split(",").map(function (s) { return s.trim(); }) : [],
-            pack: pack || "",
-            entregado: entregadoPrevio || false,
-            estado: "confirmado",
-            origen: "importado",
-          };
-        });
-        compradores = Object.assign({}, compradores, nuevos);
-        window.localStorage.setItem(COMPRADORES_KEY, JSON.stringify(compradores));
-        mostrarInfoCompradores();
-        mostrarToast(Object.keys(nuevos).length + " compradores importados ✓");
-      } catch (err) {
-        console.error("Error al importar compradores:", err);
-        alert("No se pudo leer el archivo. Fijate que sea el Excel de compradores exportado desde la página de venta.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
+  function verTotal() {
+    var ing = document.getElementById("totClave").value.replace(/\s+/g, "").toLowerCase();
+    if (CLAVES_TOTALES.indexOf(ing) < 0) { document.getElementById("totError").textContent = "Contraseña incorrecta"; return; }
+    document.getElementById("totMonto").textContent = fmtPrecio(totalVendido());
+    document.getElementById("totPaso1").style.display = "none";
+    document.getElementById("totPaso2").style.display = "";
+    document.getElementById("totClave").value = "";
+  }
+  document.getElementById("btnTotEntrar").onclick = verTotal;
+  document.getElementById("totClave").addEventListener("keydown", function (e) { if (e.key === "Enter") verTotal(); });
+  document.getElementById("btnTotCancelar").onclick = cerrarTotales;
+  document.getElementById("btnTotCerrar").onclick = cerrarTotales;
+  overlayTotales.onclick = function (e) { if (e.target === overlayTotales) cerrarTotales(); };
 </script>
 
 <script>
@@ -933,14 +831,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       var d = await db.collection("urqui").doc("contador-config").get();
       if (!d.exists) throw new Error("La app todavía no publicó los datos del contador: entrá una vez a la app como administrador.");
       var base = JSON.parse(d.data().value);
-      var snap = await db.collection("comprobantes").get();
-      var c = {};
-      snap.forEach(function (doc) {
-        var x = doc.data();
-        if (x.estado === "rechazado") return;
-        c[x.codigo] = { nombre: x.nombre, numeros: x.numeros || [], pack: x.pack || "", estado: x.estado || "pendiente" };
-      });
-      var nuevo = Object.assign({}, base, { c: c, t: "" });
+      var nuevo = Object.assign({}, base, { t: "" });
       var cambio = estable(nuevo) !== estable(Object.assign({}, CFG, { t: "" }));
       nuevo.t = new Date().toISOString();
       if (cambio) {
