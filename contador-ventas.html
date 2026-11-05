@@ -763,6 +763,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function detalleTotales() {
     var PR = CFG.pr || {};
     var html = "";
+    if (!CFG.pr) html += '<div style="background:#3a1d1d;border:1px solid var(--rojo);color:var(--rojo);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:6px;">⚠ Faltan los precios de las remeras: el total no las incluye. Entrá a la app como administrador y tocá ↻ Actualizar acá.</div>';
     // Gastronomia
     var gastro = 0;
     GASTRO_DATA.forEach(function (x) { gastro += (estado.gastro[x.n] || 0) * (x.p || 0); });

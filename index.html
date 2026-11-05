@@ -6639,7 +6639,7 @@ function TorneoPlanner({
   // Se deja publicado en Firestore para que quien entre al contador con el usuario "ventas" vea siempre lo ultimo.
   const cfgContadorTxt = JSON.stringify(cfgContador());
   useEffect(() => {
-    if (soloLectura) return;
+    if (soloLectura || !loaded) return; // hasta que no se cargan los datos guardados, no se publica nada (serian los valores de fabrica)
     const t = setTimeout(() => {
       try {
         dbSet("contador-config", cfgContadorTxt);
@@ -6648,7 +6648,7 @@ function TorneoPlanner({
       }
     }, 1500);
     return () => clearTimeout(t);
-  }, [cfgContadorTxt]);
+  }, [cfgContadorTxt, loaded]);
 
   // Abre el Contador de Ventas ONLINE en una pestaña nueva (pagina contador-ventas.html) mandandole los datos
   // de la app en el enlace. Se abre en el mismo instante del clic (sin esperar nada) para que el navegador no lo bloquee.
