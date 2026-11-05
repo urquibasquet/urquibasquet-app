@@ -876,9 +876,29 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   // Trae productos/precios/stock (los guarda la app) y los compradores, y si algo cambio recarga la pagina con lo nuevo.
   async function sincronizar(manual) {
     try {
-      var d = await db.collection("urqui").doc("contador-config").get();
-      if (!d.exists) throw new Error("La app todavía no publicó los datos del contador: entrá una vez a la app como administrador.");
-      var base = JSON.parse(d.data().value);
+      // Se leen directo los datos de la app (productos, precios, packs, stock y precios de remeras): no depende de que nadie abra la app antes.
+      var d = await db.collection("urqui").doc("urqui-torneo-7ma").get();
+      var base;
+      if (d.exists) {
+        var x = JSON.parse(d.data().value);
+        var vistos = {}, g = [];
+        (x.productosVenta || []).forEach(function (p) {
+          var n = String(p.desc || "").trim();
+          if (n && !vistos[n.toLowerCase()]) { vistos[n.toLowerCase()] = 1; g.push({ n: n, p: Number(p.precio) || 0 }); }
+        });
+        var T = ["XS", "S", "M", "L", "XL", "XXL"], r7 = {}, rj = {};
+        T.forEach(function (k) { r7[k] = Number(x["r7" + k]) || 0; rj[k] = Number(x["rj" + k]) || 0; });
+        base = {
+          g: g,
+          p1n: Number(x.pack1Num) || 0, p1p: Number(x.pack1Precio) || 0, p2n: Number(x.pack2Num) || 0, p2p: Number(x.pack2Precio) || 0, p3n: Number(x.pack3Num) || 0, p3p: Number(x.pack3Precio) || 0,
+          tn: Number(x.totalNumeros) || 0, r7: r7, rj: rj,
+          pr: { e7: Number(x.precioEfectivo7ma) || 0, t7: Number(x.precioTransferencia7ma) || 0, ej: Number(x.precioEfectivoJuego) || 0, tj: Number(x.precioTransferenciaJuego) || 0 }
+        };
+      } else {
+        var d2 = await db.collection("urqui").doc("contador-config").get();
+        if (!d2.exists) throw new Error("No se encontraron los datos de la app.");
+        base = JSON.parse(d2.data().value);
+      }
       var nuevo = Object.assign({}, base, { t: "" });
       var cambio = estable(nuevo) !== estable(Object.assign({}, CFG, { t: "" }));
       nuevo.t = new Date().toISOString();
