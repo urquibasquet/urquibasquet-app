@@ -198,6 +198,9 @@
   .tot-fila .met.cero { color: var(--muted); font-weight: 600; }
   .tot-simple { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12.5px; }
   .tot-simple strong { color: var(--blanco); }
+  .tot-fila.sub { border-bottom: none; border-top: 1px solid var(--muted); margin-top: 2px; }
+  .tot-fila.sub .lab { color: var(--claro); }
+  .tot-total strong { color: var(--verde); font-size: 14px; }
 
   .header { justify-content: flex-start !important; flex-wrap: nowrap !important; } .header .titles { margin-right: auto; flex-shrink: 0; } .status-bar { min-width: 0; flex-wrap: wrap; } .btn-salir { white-space: nowrap; flex-shrink: 0; }
   @media (max-width: 700px) { .header { flex-wrap: wrap !important; } .btn-salir { margin-left: auto; } }
@@ -759,6 +762,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function filaMet(label, e, t, pe, pt) {
     return '<div class="tot-fila"><div class="lab">' + label + '</div>' + celdaMet(e, e * pe) + celdaMet(t, t * pt) + '</div>';
   }
+  // Fila de subtotal de una seccion: plata en efectivo, plata en transferencia y el total de la seccion
+  function filaSubtotal(titulo, montoE, montoT) {
+    return '<div class="tot-fila sub"><div class="lab">Subtotal</div><div class="met">' + fmtPrecio(montoE) + '</div><div class="met">' + fmtPrecio(montoT) + '</div></div>' +
+      '<div class="tot-simple tot-total"><span>Total ' + titulo + '</span><strong>' + fmtPrecio(montoE + montoT) + '</strong></div>';
+  }
   var CAB_MET = '<div class="tot-head"><div></div><div>💵 Efectivo</div><div>💳 Transferencia</div></div>';
   function detalleTotales() {
     var PR = CFG.pr || {};
@@ -771,21 +779,27 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     // Sorteo: por pack, en efectivo y en transferencia
     var precioPack = { "Pack 1": PACK1_PRECIO, "Pack 2": PACK2_PRECIO, "Pack 3": PACK3_PRECIO };
     html += '<div class="tot-sec">Sorteo</div>' + CAB_MET;
+    var sE = 0, sT = 0;
     SORTEO_ITEMS.forEach(function (p) {
       var m = estado.sorteoMetodo[p] || { efectivo: 0, transferencia: 0 };
       html += filaMet(p, m.efectivo, m.transferencia, precioPack[p] || 0, precioPack[p] || 0);
+      sE += m.efectivo * (precioPack[p] || 0); sT += m.transferencia * (precioPack[p] || 0);
     });
+    html += filaSubtotal("sorteo", sE, sT);
     // Remeras: por talle
-    function remeras(titulo, grupoMetodo, pe, pt) {
-      var filas = "";
+    function remeras(titulo, grupoMetodo, pe, pt, corto) {
+      var filas = "", mE = 0, mT = 0;
       TALLES.forEach(function (n) {
         var m = estado[grupoMetodo][n] || { efectivo: 0, transferencia: 0 };
-        if (m.efectivo + m.transferencia > 0) filas += filaMet("Talle " + n, m.efectivo, m.transferencia, pe, pt);
+        if (m.efectivo + m.transferencia > 0) {
+          filas += filaMet("Talle " + n, m.efectivo, m.transferencia, pe, pt);
+          mE += m.efectivo * pe; mT += m.transferencia * pt;
+        }
       });
-      return '<div class="tot-sec">' + titulo + '</div>' + (filas ? CAB_MET + filas : '<div class="tot-simple"><span>Sin ventas</span></div>');
+      return '<div class="tot-sec">' + titulo + '</div>' + (filas ? CAB_MET + filas + filaSubtotal(corto, mE, mT) : '<div class="tot-simple"><span>Sin ventas</span></div>');
     }
-    html += remeras("Remeras algodón (7ma)", "remerasAlgodonMetodo", PR.e7 || 0, PR.t7 || 0);
-    html += remeras("Remeras de juego", "remerasJuegoMetodo", PR.ej || 0, PR.tj || 0);
+    html += remeras("Remeras algodón (7ma)", "remerasAlgodonMetodo", PR.e7 || 0, PR.t7 || 0, "remeras 7ma");
+    html += remeras("Remeras de juego", "remerasJuegoMetodo", PR.ej || 0, PR.tj || 0, "remeras de juego");
     return html;
   }
   var overlayTotales = document.getElementById("overlayTotales");
