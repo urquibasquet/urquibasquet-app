@@ -1,0 +1,31 @@
+{
+  "name": "Contador de Ventas El Urqui Básquet",
+  "short_name": "Ventas Urqui",
+  "description": "Contador de ventas del torneo 3x3 El Urqui Básquet",
+  "start_url": "contador-ventas.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17408b",
+  "theme_color": "#17408b",
+  "icons": [
+    {
+      "src": "icon-ventas-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-ventas-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-ventas-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
