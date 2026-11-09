@@ -473,7 +473,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function cambiar(grupo, nombre, delta) {
     var nuevo = (estado[grupo][nombre] || 0) + delta;
     if (nuevo < 0) nuevo = 0;
+    var aplicado = nuevo - (estado[grupo][nombre] || 0);
     estado[grupo][nombre] = nuevo;
+    if (aplicado && window.__cvInc) window.__cvInc([[[grupo, nombre], aplicado]]);
     document.getElementById("count-" + grupo + "-" + slug(nombre)).textContent = nuevo;
     var stockMap = STOCK_MAPS[grupo];
     if (stockMap) {
@@ -493,6 +495,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     var actual = estado[grupoMetodo][nombre][metodo] || 0;
     var nuevo = actual + delta;
     if (nuevo < 0) nuevo = 0;
+    var aplicado = nuevo - actual;
+    if (aplicado && window.__cvInc) window.__cvInc([[[grupoMetodo, nombre, metodo], aplicado], [[grupo, nombre], aplicado]]);
     estado[grupoMetodo][nombre][metodo] = nuevo;
 
     // El total (el que ya usan stock/resumen) siempre es la suma de los dos metodos.
@@ -753,8 +757,39 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       });
     });
     guardar();
+    if (window.__cvReset) window.__cvReset(estado);
     mostrarToast("Contadores reiniciados");
   };
+
+  // ── Sincronizacion entre dispositivos (la usa la version online): recibe el estado compartido y refresca la pantalla ──
+  function aplicarRemoto(p) {
+    estado = {
+      gastro: Object.assign({}, ceros(GASTRO_ITEMS), p.gastro || {}),
+      sorteo: Object.assign({}, ceros(SORTEO_ITEMS), p.sorteo || {}),
+      remerasAlgodon: Object.assign({}, ceros(TALLES), p.remerasAlgodon || {}),
+      remerasJuego: Object.assign({}, ceros(TALLES), p.remerasJuego || {}),
+      sorteoMetodo: migrarSorteoMetodo(Object.assign({}, ceros(SORTEO_ITEMS), p.sorteo || {}), Object.assign({}, cerosMetodo(SORTEO_ITEMS), p.sorteoMetodo || {})),
+      remerasAlgodonMetodo: Object.assign({}, cerosMetodo(TALLES), p.remerasAlgodonMetodo || {}),
+      remerasJuegoMetodo: Object.assign({}, cerosMetodo(TALLES), p.remerasJuegoMetodo || {}),
+    };
+    function pone(grupo, nombre) {
+      var c = document.getElementById("count-" + grupo + "-" + slug(nombre));
+      if (c) c.textContent = estado[grupo][nombre] || 0;
+      var sm = STOCK_MAPS[grupo];
+      if (sm) {
+        var el = document.getElementById("stock-" + grupo + "-" + slug(nombre));
+        if (el) actualizarColorStock(el, (sm[nombre] || 0) - (estado[grupo][nombre] || 0));
+      }
+      if (METODO_MAPS[grupo]) actualizarLeyendaMetodo(grupo, nombre);
+    }
+    GASTRO_ITEMS.forEach(function (n) { pone("gastro", n); });
+    SORTEO_ITEMS.forEach(function (n) { pone("sorteo", n); });
+    TALLES.forEach(function (n) { pone("remerasAlgodon", n); pone("remerasJuego", n); });
+    actualizarResumenSorteo();
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); } catch (e) {}
+    document.getElementById("lastSaved").textContent = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  window.__cvApi = { get: function () { return estado; }, aplicar: aplicarRemoto };
 
   (function () {
     try {
@@ -953,6 +988,40 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       if (manual && typeof mostrarToast === "function") mostrarToast("No se pudo actualizar (¿sin conexión?)");
     }
   }
+  // ── Estado compartido: lo que se carga en un dispositivo se ve en todos los que tengan la sesion ──
+  var refEst = db.collection("urqui").doc("contador-ventas-estado"), FV = firebase.firestore.FieldValue, primeraVez = true, sincOk = false;
+  function totalEst(e) {
+    var t = 0;
+    ["gastro", "sorteo", "remerasAlgodon", "remerasJuego"].forEach(function (g) { Object.keys(e[g] || {}).forEach(function (k) { t += Number(e[g][k]) || 0; }); });
+    return t;
+  }
+  window.__cvInc = function (lista) {
+    var o = {};
+    lista.forEach(function (it) {
+      var ruta = it[0], d = it[1], cur = o;
+      for (var i = 0; i < ruta.length - 1; i++) { cur = cur[ruta[i]] = cur[ruta[i]] || {}; }
+      cur[ruta[ruta.length - 1]] = FV.increment(d);
+    });
+    refEst.set(o, { merge: true }).catch(function (e) { console.error(e); if (stEl) { stEl.textContent = "⚠ No se pudo sincronizar con los otros dispositivos"; stEl.style.color = "#FF6B6B"; } });
+  };
+  window.__cvReset = function (e) { refEst.set(JSON.parse(JSON.stringify(e))).catch(function (er) { console.error(er); }); };
+  function escucharEstado() {
+    refEst.onSnapshot(function (s) {
+      var d = s.exists ? s.data() : null, api = window.__cvApi;
+      if (!api) return;
+      if (primeraVez) {
+        primeraVez = false;
+        var loc = api.get();
+        // Si lo compartido esta vacio y este dispositivo ya tenia ventas cargadas, se suben (no se pierde lo cargado antes de esta version).
+        if ((!d || totalEst(d) === 0) && totalEst(loc) > 0) { refEst.set(JSON.parse(JSON.stringify(loc))).catch(function () {}); return; }
+        if (!d) { refEst.set(JSON.parse(JSON.stringify(loc))).catch(function () {}); return; }
+      }
+      if (d) { api.aplicar(d); if (stEl) { stEl.textContent = "Sincronizado ✓"; stEl.style.color = "var(--verde)"; } }
+    }, function (err) {
+      console.error(err);
+      if (stEl) { stEl.textContent = "⚠ Sin sincronizar (los datos quedan en este dispositivo)"; stEl.style.color = "#FF6B6B"; }
+    });
+  }
   if (bAct) bAct.onclick = function () { sincronizar(true); };
   if (bSal) bSal.onclick = function () { auth.signOut().then(function () { window.location.replace("index.html"); }, function () { window.location.replace("index.html"); }); };
 
@@ -962,6 +1031,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     document.documentElement.style.visibility = "";
     if (SIN_CFG && stEl) { stEl.textContent = "Cargando datos…"; stEl.style.color = ""; }
     sincronizar(false);
+    if (!window.__escuchando) { window.__escuchando = true; escucharEstado(); }
   });
 })();
 </script>
